@@ -6,6 +6,8 @@ const Layout = () => {
   return (
     <Stack>
         <Stack.Screen name="Workout" options={{ headerShown: false }}/>
+        <Stack.Screen name="NewWorkout" options={{ headerShown: false }}/>
+        <Stack.Screen name="ViewWorkout" options={{ headerShown: false }}/>
     </Stack>
   )
 }

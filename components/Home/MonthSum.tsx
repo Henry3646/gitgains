@@ -73,9 +73,9 @@ const MonthSum = () => {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
         const { data, error } = await supabase
-            .from('Completed_Workout')
-            .select('start_time, User_CompletedWorkout!inner(user_id)')
-            .eq('User_CompletedWorkout.user_id', userId)
+            .from('Completed_Workouts')
+            .select('start_time')
+            .eq('user_id', userId)
             .gte('start_time', startOfMonth)
             .lte('start_time', endOfMonth)
 
@@ -98,7 +98,7 @@ const MonthSum = () => {
     getCurrentUserId().then((userId: any) => {
       getCompletedDays('e9cac5f4-62df-46bd-afc4-08d89aba2f51')
     })
-  }, []);
+  }, [])
 
   
 
@@ -110,7 +110,7 @@ const MonthSum = () => {
         <CardContent>
             <View className='flex-col gap-3'>
                 {daysGrid.map((week, index) => (
-                    <View key={`week-${index}`} className='justify-around flex-row'>
+                    <View key={`week-${week}-${index}`} className='justify-around flex-row'>
                     {week.map((value: any, dayIndex: any) => (
                         <>
                             {daysArray ?

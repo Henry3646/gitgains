@@ -11,8 +11,7 @@ const getCurrentUserId = async () => {
     const session = data?.session;
     if (session?.user) {
        // Set the userId after getting the session
-      // return session.user.id;
-      return 'e9cac5f4-62df-46bd-afc4-08d89aba2f51'      
+      return session.user.id     
     }
     return null;
   };

@@ -10,7 +10,7 @@ const Profile = () => {
   const { colorScheme, setColorScheme } = useColorScheme()
   const theme = colorScheme === 'dark' ? 'dark' : 'light'
   return (
-    <View>
+    <View className='mt-10'>
       <Text>Profile</Text>
       <ThemeToggle />
     </View>

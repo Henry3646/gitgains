@@ -10,47 +10,43 @@ import {
   CardTitle,
 } from '~/components/ui/card'
 import { Text } from '~/components/ui/text'
+import { Button } from '~/components/ui/button'
 import { supabase } from '~/lib/supabase'
+import RecentWorkout from '~/components/Home/RecentWorkout'
+import { H1, H2, H3, H4 } from '~/components/ui/typography'
+import WorkoutsModal from '~/components/Home/WorkoutsModal'
+import { Skeleton } from '~/components/ui/skeleton'
 
 const Home = () => {
   const [refreshing, setRefreshing] = useState(false)
   const [userId, setUserId] = useState('')
-  const [completedWorkouts, setCompletedWorkouts] = useState([])
+  const [completedWorkouts, setCompletedWorkouts] = useState<any[]>([])
   const [totalCalories, setTotalCalories] = useState(0)
   const [totalWeight, setTotalWeight] = useState(0)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [loading, setLoading] = useState(true)
+  
 
   const refreshExercises = async () => {
+    setLoading(true)
     setRefreshing(true)
+    console.log(userId)
     if (userId) {
       await getCompletedWorkoutsForUser(userId)
       await getMonthlySummaryDataForUser(userId)
     }
+    console.log('done')
     setRefreshing(false)
+    setLoading(false)
   }
-
-  const getCurrentUserId = async () => {
-    const { data, error } = await supabase.auth.getSession()
-
-    if (error) {
-      console.error('Error fetching session:', error)
-      return null
-    }
-
-    const session = data?.session
-    if (session?.user) {
-      setUserId(session.user.id)
-      return session.user.id
-    }
-    return null 
-  } 
 
   const getCompletedWorkoutsForUser = async (userId: any) => {
     if (!userId) return  
 
     const { data, error } = await supabase
-      .from('Completed_Workout') 
-      .select('*, User_CompletedWorkout!inner(user_id)') 
-      .eq('User_CompletedWorkout.user_id', userId)  
+      .from('Completed_Workouts') 
+      .select('*') 
+      .eq('user_id', userId)  
       .order('start_time', { ascending: false })
 
     if (error) {
@@ -64,7 +60,6 @@ const Home = () => {
   }
 
   const getMonthlySummaryDataForUser = async (userId: any) => {
-
     const calculateTotalCalories = (data: any) => {
       return data.reduce((total: any, workout: any) => total + workout.calories_burnt, 0)
     }
@@ -79,7 +74,7 @@ const Home = () => {
 
     // Query completed_workouts table
     const { data, error } = await supabase
-      .from('Completed_Workout')
+      .from('Completed_Workouts')
       .select('calories_burnt, total_weight')
       .gte('start_time', startOfMonth.toISOString())
       .lte('start_time', endOfMonth.toISOString())
@@ -101,46 +96,77 @@ const Home = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const currentUserId = await getCurrentUserId() 
+      // const currentUserId = await getCurrentUserId()
+      const currentUserId = 'e9cac5f4-62df-46bd-afc4-08d89aba2f51' 
       if (currentUserId) {
         await getCompletedWorkoutsForUser(currentUserId)
         await getMonthlySummaryDataForUser(currentUserId)
       }
     } 
+    setLoading(true)
     fetchUserData() 
+    setLoading(false)
   }, []) 
   return (
-    <ScrollView
-    refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={refreshExercises}
-        />
-      }
-    >
-      <View className='flex-col justify-around items-center gap-6'>
-        <MonthSum />
-        <View className='justify-between flex-row w-[90%]'>
-          <Card className='w-[165px] h-[110px]'>
-            <CardHeader>
-              <CardTitle>Calories</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Text className='text-[22px]'>{totalCalories}<Text>kcal</Text></Text>
-            </CardContent>
-          </Card>
-          <Card className='w-[165px] h-[110px]'>
-            <CardHeader>
-              <CardTitle>Volume</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Text className='text-[22px]'>{totalWeight}<Text>lbs</Text></Text>
-              
-            </CardContent>
-          </Card>
+    <View>
+      <WorkoutsModal modalVisible={modalVisible} setModalVisible={setModalVisible} />
+      <ScrollView
+      className='h-full'
+      refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refreshExercises}
+          />
+        }
+      >
+        <View className='flex-col justify-around items-center gap-6 mt-20 h-full'>
+          <MonthSum />
+          <View className='justify-between flex-row w-[90%]'>
+            <Card className='w-[165px] h-[110px]'>
+              <CardHeader>
+                <CardTitle>Calories</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Text className='text-[22px]'>{totalCalories}<Text>kcal</Text></Text>
+              </CardContent>
+            </Card>
+            <Card className='w-[165px] h-[110px]'>
+              <CardHeader>
+                <CardTitle>Volume</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Text className='text-[22px]'>{totalWeight}<Text>lbs</Text></Text>
+
+              </CardContent>
+            </Card>
+          </View>
+          <H3 className='text-left w-[90%]'>Recent Workouts</H3>
+            {loading ? 
+                    <Skeleton className=' w-[90%] h-[140px]' />
+                    :
+                    <>
+                    {completedWorkouts.length > 0 ?
+              <>
+              {completedWorkouts.map((workout: any) => (
+                <RecentWorkout key={workout.id} workout={workout} />
+              ))}
+              </>
+              :
+              <Text>No completed workouts,
+                you should be ashamed
+              </Text>
+            }
+                    </>  
+                }
         </View>
+        
+      </ScrollView>
+      <View className=' aboslute bottom-14 items-center'>
+        <Button className='w-[90%]' onPress={() => setModalVisible(true)}>
+          <Text className='font-bold'>Start Workout</Text>
+        </Button>
       </View>
-    </ScrollView>
+    </View>
   )
 }
 

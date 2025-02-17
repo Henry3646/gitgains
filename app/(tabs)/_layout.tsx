@@ -1,5 +1,5 @@
 import { Link, Tabs } from 'expo-router'
-import { Home, Dumbbell, UserRound } from 'lucide-react-native'
+import { Home, Dumbbell, UserRound, Sparkles } from 'lucide-react-native'
 import { useColorScheme } from '~/lib/useColorScheme'
 import { NAV_THEME } from '~/lib/constants';
 
@@ -13,38 +13,39 @@ export default function TabLayout() {
                 tabBarInactiveTintColor: 'gray',
                 tabBarStyle: {
                     paddingTop: 15,
-                }
+                },
+                animation: 'shift',
             }}
         >
             <Tabs.Screen
                 name='(home)'
                 options={{
-                    headerShown: true,
-                    tabBarIcon: (({ focused }) => <Home size={40} color={theme.text} strokeWidth={focused ? 2: 1}/>),
+                    headerShown: false,
+                    tabBarIcon: (({ focused }) => <Home size={40} color={theme.text} strokeWidth={focused ? 1.5: 1}/>),
                     tabBarShowLabel: false,
                 }}
             />
             <Tabs.Screen
                 name='(workouts)'
                 options={{
-                    headerShown: true,
-                    tabBarIcon: (({ focused }) => <Dumbbell size={40} color={theme.text} strokeWidth={focused ? 2: 1}/>),
+                    headerShown: false,
+                    tabBarIcon: (({ focused }) => <Dumbbell size={40} color={theme.text} strokeWidth={focused ? 1.5: 1}/>),
                     tabBarShowLabel: false,
                 }}
             />    
             <Tabs.Screen
                 name='(stats)'
                 options={{
-                    headerShown: true,
-                    tabBarIcon: (({ focused }) => <Dumbbell size={40} color={theme.text} strokeWidth={focused ? 2: 1}/>),
+                    headerShown: false,
+                    tabBarIcon: (({ focused }) => <Sparkles size={40} color={theme.text} strokeWidth={focused ? 1.5: 1}/>),
                     tabBarShowLabel: false,
                 }}
             />    
             <Tabs.Screen
                 name='(profile)'
                 options={{
-                    headerShown: true,
-                    tabBarIcon: (({ focused }) => <UserRound size={40} color={theme.text} strokeWidth={focused ? 2: 1}/>),
+                    headerShown: false,
+                    tabBarIcon: (({ focused }) => <UserRound size={40} color={theme.text} strokeWidth={focused ? 1.5: 1}/>),
                     tabBarShowLabel: false,
                 }}
             />       
