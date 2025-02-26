@@ -12,8 +12,10 @@ import { Text } from '~/components/ui/text'
 import { Skeleton } from '~/components/ui/skeleton'
 import { Badge } from '~/components/ui/badge'
 import { Card } from '~/components/ui/card'
+import { Button } from '~/components/ui/button'
 import SwipeableRow from '~/components/SwipeableRow'
 import ExerciseComponent from '~/components/Workouts/ExerciseComponent'
+import StartWorkoutModal from '~/components/Workouts/StartWorkoutModal'
 
 type Workout = {
   id: string
@@ -31,6 +33,7 @@ const ViewWorkout = () => {
   const [loading, setLoading] = useState(true)
   const [workout, setWorkout] = useState<Workout>()
   const [exercises, setExercises] = useState<any[]>([])
+  const [showStartWorkoutModal, setShowStartWorkoutModal] = useState(false) 
 
   const getWorkout = async (userId: string) => {
     // Fetch workout by workoutId
@@ -68,6 +71,11 @@ const ViewWorkout = () => {
     }
   }
 
+  const handleStartWorkout = () => {
+    // Start workout
+    setShowStartWorkoutModal(true)
+  }
+
   useEffect(() => {
     // Fetch workout by workoutId
     getCurrentUserId().then((userId) => {
@@ -77,6 +85,7 @@ const ViewWorkout = () => {
   }, [])
   return (
     <View className='h-full w-full mt-14 '>
+      <StartWorkoutModal modalVisible={showStartWorkoutModal} setModalVisible={setShowStartWorkoutModal} workout={workout} />
       <View className='w-full flex-row items-center pt-4'>
         <TouchableOpacity onPress={() => router.back()} >
           <ChevronLeft size={30} color={theme.text} strokeWidth={2}/>
@@ -94,7 +103,6 @@ const ViewWorkout = () => {
           {!loading && <Text className='text-xl w-full flex-wrap'>{workout?.desc}</Text> }
           
       </View>
-      <H2 />
       <View className='w-full items-center p-5 mt-5'>
         {loading ?
           <View className='w-full flex-row items-center justify-around gap-2'>
@@ -132,7 +140,7 @@ const ViewWorkout = () => {
           </View>
         }
       </View>
-      <H2 />
+      <H2 className='ml-[5%] pt-6'>Exercises</H2>
       <View className='w-full items-center pt-4'>
         {loading ?
           <View className='w-full flex-col items-center gap-2'>
@@ -149,6 +157,11 @@ const ViewWorkout = () => {
       </View>
       <View className='h-[100px]' />
       </ScrollView>
+      <View className='absolute bottom-16 items-center w-full'>
+          <Button className='w-[90%] mt-4' onPress={handleStartWorkout}>
+              <Text>Start Workout</Text>
+          </Button>
+      </View>
     </View>
   )
 }
