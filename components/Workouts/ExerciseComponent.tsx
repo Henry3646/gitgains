@@ -38,10 +38,10 @@ const ExerciseComponent = ({exercise, checked, editable}: {exercise: any, checke
     <Card className='w-[100%]'>
             <CardHeader className='pb-0'>
                 <CardTitle>{exercise.name}</CardTitle>
-                <CardDescription numberOfLines={1} ellipsizeMode='tail' className='w-[80%]'>{exercise.desc}</CardDescription>
+                <CardDescription numberOfLines={1} ellipsizeMode='tail' className='w-[80%]' >{exercise.desc}</CardDescription>
             </CardHeader>
             <CardContent>
-                <View className='flex-row mb-2'>
+                <View className='flex-row py-2'>
                     {exercise.muscle_group?.map((group: any) => (
                         <Badge key={group} className='mr-4'>
                             <Text>{group}</Text>

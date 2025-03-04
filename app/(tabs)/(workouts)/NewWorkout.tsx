@@ -119,7 +119,7 @@ const NewWorkout = () => {
     <View className='w-full h-full mt-14'>
       <AddExerciseToWorkout modalVisible={addModal} setModalVisible={setAddModal} switchModal={openCreateModal} exercises={addedExercise} setExercises={setAddedExercise}/>
       <CreateExercise modalVisible={createModal} setModalVisible={setCreateModal} switchModal={closeCreateModal}/>
-      <TouchableOpacity className='flex-row items-center pt-4' onPress={() => router.back()}>
+      <TouchableOpacity className='flex-row items-center pt-4' onPress={() => router.dismiss()}>
       <ChevronLeft size={30} color={theme.text} strokeWidth={2} />
       <H2 className='ml-[5%] pt-2'>New Workout</H2>
       </TouchableOpacity>

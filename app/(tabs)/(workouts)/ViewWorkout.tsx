@@ -85,7 +85,7 @@ const ViewWorkout = () => {
   }, [])
   return (
     <View className='h-full w-full mt-14 '>
-      <StartWorkoutModal modalVisible={showStartWorkoutModal} setModalVisible={setShowStartWorkoutModal} workout={workout} />
+      <StartWorkoutModal modalVisible={showStartWorkoutModal} setModalVisible={setShowStartWorkoutModal} workout={workout} exercises={exercises} />
       <View className='w-full flex-row items-center pt-4'>
         <TouchableOpacity onPress={() => router.back()} >
           <ChevronLeft size={30} color={theme.text} strokeWidth={2}/>
@@ -130,11 +130,11 @@ const ViewWorkout = () => {
           :
           <View className='w-full flex-row items-center justify-around gap-2'>
             <Card className='w-[120px] h-[80px] items-center justify-center' >
-              <Text className='text-lg'>{exercises.length}</Text>
+              <Text className='text-2xl'>{exercises.length}</Text>
               <Text className='text-lg font-bold'>Exercises</Text>
             </Card>
             <Card className='w-[120px] h-[80px] items-center justify-center' >
-              <Text className='text-lg'>{workout?.total_sets}</Text>
+              <Text className='text-2xl'>{workout?.total_sets}</Text>
               <Text className='text-lg font-bold'>Total Sets</Text>
             </Card>
           </View>

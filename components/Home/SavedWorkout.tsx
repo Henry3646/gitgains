@@ -27,9 +27,9 @@ const SavedWorkout = ({workout}: {workout: any}) => {
         <Card className=''>
             <CardHeader>
                 <CardTitle>{workout.name}</CardTitle>
-                <CardDescription>{workout.desc}</CardDescription>
+                <CardDescription className=''>{workout.desc}</CardDescription>
             </CardHeader>
-            <CardFooter>
+            <CardFooter >
                 {workout?.muscle_groups.map((muscle: any, index: any) => (
                     <Badge key={muscle} className='mr-4'>
                         <Text>{muscle}</Text>

@@ -103,7 +103,7 @@ const MonthSum = () => {
   
 
   return (
-    <Card className='w-[90%] h-[250px]'>
+    <Card className='w-[90%]'>
         <CardHeader>
             <CardTitle>{months[new Date().getMonth()]} {new Date().getFullYear()}</CardTitle>
         </CardHeader>
@@ -130,9 +130,9 @@ const MonthSum = () => {
                     </View>
                 ))}
             </View>
-            <View className='justify-around flex-row mt-2'>
+            <View className='justify-around flex-row mt-4'>
                 {daysOfWeek.map((day, index) => (
-                    <View key={index} className=' w-[20px] h-[20px] items-center justify-center'>
+                    <View key={index} className=' w-[20px] items-center justify-center'>
                         <Text className='text-[18px] font-bold'>{day}</Text>
                     </View>
                 ))}
