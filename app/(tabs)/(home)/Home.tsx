@@ -61,11 +61,13 @@ const Home = () => {
 
   const getMonthlySummaryDataForUser = async (userId: any) => {
     const calculateTotalCalories = (data: any) => {
-      return data.reduce((total: any, workout: any) => total + workout.calories_burnt, 0)
+      console.log(data)
+      return data.length
     }
 
     const calculateTotalWeight = (data: any) => {
       return data.reduce((total: any, workout: any) => total + workout.total_weight, 0)
+      
     }
 
     const currentDate = new Date();
@@ -94,6 +96,26 @@ const Home = () => {
     
   }
 
+  function formatCompactNumber(num: number): string {
+    const absNum = Math.abs(num);
+    const suffixes = ['', 'k', 'm', 'b', 't'];
+    const suffixNum = Math.min(
+      Math.floor(absNum === 0 ? 0 : Math.log10(absNum) / 3),
+      suffixes.length - 1
+    );
+    
+    const shortNumber = num / Math.pow(10, suffixNum * 3);
+    const formatter = new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 0
+    });
+  
+    // Handle edge case for numbers between 0-999
+    if (suffixNum === 0) return num.toString();
+  
+    return formatter.format(shortNumber) + suffixes[suffixNum];
+  }
+
   useEffect(() => {
     const fetchUserData = async () => {
       // const currentUserId = await getCurrentUserId()
@@ -119,15 +141,15 @@ const Home = () => {
           />
         }
       >
-        <View className='flex-col justify-around items-center gap-6 mt-20 h-full'>
+        <View className='flex-col justify-around items-center mt-20 h-full'>
           <MonthSum />
           <View className='justify-between flex-row w-[90%]'>
             <Card className='w-[165px] h-[110px]'>
               <CardHeader>
-                <CardTitle>Calories</CardTitle>
+                <CardTitle>Workouts</CardTitle>
               </CardHeader>
               <CardContent>
-                <Text className='text-[22px]'>{totalCalories}<Text>kcal</Text></Text>
+                <Text className='text-[22px]'>{totalCalories}<Text> kcal</Text></Text>
               </CardContent>
             </Card>
             <Card className='w-[165px] h-[110px]'>
@@ -135,7 +157,7 @@ const Home = () => {
                 <CardTitle>Volume</CardTitle>
               </CardHeader>
               <CardContent>
-                <Text className='text-[22px]'>{totalWeight}<Text>lbs</Text></Text>
+                <Text className='text-[22px]'>{formatCompactNumber(totalWeight)}<Text> lbs</Text></Text>
 
               </CardContent>
             </Card>
@@ -146,11 +168,12 @@ const Home = () => {
                     :
                     <>
                     {completedWorkouts.length > 0 ?
-              <>
+              <View className='gap-4'>
               {completedWorkouts.map((workout: any) => (
                 <RecentWorkout key={workout.id} workout={workout} />
               ))}
-              </>
+                <View className='h-36' />
+              </View>
               :
               <Text>No completed workouts,
                 you should be ashamed

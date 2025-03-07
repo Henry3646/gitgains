@@ -3,18 +3,21 @@ import { View, TouchableOpacity, Animated, Text, Alert } from 'react-native';
 import { useColorScheme } from '~/lib/useColorScheme'
 import { NAV_THEME } from '~/lib/constants'
 import { Button } from '../ui/button';
+import { Text as TextUI } from '../ui/text';
 import { Pause, Square, Play } from 'lucide-react-native';
 
 interface AnimatedTimerProps {
-    time: number;
-    setTime: any;
-    onStop: any;
+    time: number
+    setTime: any
+    onStop: any
+    status: string
+    setStatus: any
+    setStartTime: any
 }
 
-const AnimatedTimer = ({ time, setTime, onStop }: AnimatedTimerProps) => {
+const AnimatedTimer = ({ time, setTime, onStop, status, setStatus, setStartTime }: AnimatedTimerProps) => {
   const { isDarkColorScheme } = useColorScheme()
   const theme = isDarkColorScheme ? NAV_THEME.dark : NAV_THEME.light
-  const [status, setStatus] = useState('idle'); // 'idle' | 'running' | 'paused'
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -47,10 +50,11 @@ const AnimatedTimer = ({ time, setTime, onStop }: AnimatedTimerProps) => {
   const handleStartWorkout = () => {
     setTime(0);
     setStatus('running');
+    setStartTime(new Date());
   };
 
   const handlePauseResume = () => {
-    setStatus(prev => prev === 'running' ? 'paused' : 'running');
+    setStatus((prev: string) => prev === 'running' ? 'paused' : 'running');
   };
 
   const confirmFinish = () => {
@@ -90,7 +94,7 @@ const AnimatedTimer = ({ time, setTime, onStop }: AnimatedTimerProps) => {
         <Button 
           className='w-[90%]'
           onPress={handleStartWorkout}>
-          <Text>Start Workout</Text>
+          <TextUI>Start Workout</TextUI>
         </Button>
       ) : (
         <View className='flex-row gap-4' >

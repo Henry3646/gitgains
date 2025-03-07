@@ -26,6 +26,7 @@ type Workout = {
   desc: string
 }
 
+
 const ViewWorkout = () => {
   const { isDarkColorScheme } = useColorScheme()
   const theme = isDarkColorScheme ? NAV_THEME.dark : NAV_THEME.light
@@ -33,7 +34,8 @@ const ViewWorkout = () => {
   const [loading, setLoading] = useState(true)
   const [workout, setWorkout] = useState<Workout>()
   const [exercises, setExercises] = useState<any[]>([])
-  const [showStartWorkoutModal, setShowStartWorkoutModal] = useState(false) 
+  const [showStartWorkoutModal, setShowStartWorkoutModal] = useState(false)
+  const [completedWorkoutData, setCompletedWorkoutData] = useState<any>()
 
   const getWorkout = async (userId: string) => {
     // Fetch workout by workoutId
@@ -90,7 +92,7 @@ const ViewWorkout = () => {
         <TouchableOpacity onPress={() => router.back()} >
           <ChevronLeft size={30} color={theme.text} strokeWidth={2}/>
           </TouchableOpacity>
-        <H2 className='ml-[4%] pt-2 w-full '>{workout?.name}</H2>
+        <H2 className=' pt-2 w-full '>{workout?.name}</H2>
       </View>
       <ScrollView className='w-full h-full'>
       <View className='w-full p-8 pb-0'>
