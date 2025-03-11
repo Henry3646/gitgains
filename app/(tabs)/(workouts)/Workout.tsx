@@ -41,7 +41,8 @@ const Workout = () => {
 
   const refreshWorkouts = async () => {
     setRefreshing(true)
-    await getWorkoutsForUser('e9cac5f4-62df-46bd-afc4-08d89aba2f51')
+    const userId = await getCurrentUserId()
+    await getWorkoutsForUser(userId)
     setRefreshing(false)
   }
 
@@ -50,7 +51,7 @@ const Workout = () => {
             setLoading(true)
             console.log('useFocusEffect')
             getCurrentUserId().then((userId: any) => {
-                getWorkoutsForUser('e9cac5f4-62df-46bd-afc4-08d89aba2f51')
+                getWorkoutsForUser(userId)
             })
             setLoading(false)
           }, [])
@@ -59,7 +60,7 @@ const Workout = () => {
     useEffect(() => {
         setLoading(true)
         getCurrentUserId().then((userId: any) => {
-            getWorkoutsForUser('e9cac5f4-62df-46bd-afc4-08d89aba2f51')
+            getWorkoutsForUser(userId)
         })
         setLoading(false)
     }, [])
@@ -84,7 +85,7 @@ const Workout = () => {
                     />
                 }
             >
-                <View className='flex-col w-full items-center mt-4'>
+                <View className='flex-col w-full items-center mt-4 pb-16'>
                     {loading ? 
                     <Skeleton className=' w-[90%] h-[140px]' />
                     :

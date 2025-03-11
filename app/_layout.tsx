@@ -11,6 +11,9 @@ import { PortalHost } from '@rn-primitives/portal';
 import { ThemeToggle } from '~/components/ThemeToggle';
 import { setAndroidNavigationBar } from '~/lib/android-navigation-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { supabase } from '~/lib/supabase';
+import { Session } from '@supabase/supabase-js';
+import { useRouter, useSegments } from 'expo-router';
 
 const LIGHT_THEME: Theme = {
   ...DefaultTheme,
@@ -27,11 +30,37 @@ export {
 } from 'expo-router';
 
 export default function RootLayout() {
+  const [session, setSession] = React.useState<Session | null>(null);
+  const segments = useSegments();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+  }, []);
+
+  React.useEffect(() => {
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!session && !inAuthGroup) {
+      // Redirect to the sign-in page if not authenticated
+      router.replace('/(auth)');
+    } else if (session && inAuthGroup) {
+      // Redirect to the home page if authenticated
+      router.replace('/(tabs)/(home)/Home');
+    }
+  }, [session, segments]);
+
   const hasMounted = React.useRef(false);
   const { colorScheme, isDarkColorScheme } = useColorScheme();
   const [isColorSchemeLoaded, setIsColorSchemeLoaded] = React.useState(false);
 
-  useIsomorphicLayoutEffect(() => {
+  React.useEffect(() => {
     if (hasMounted.current) {
       return;
     }
@@ -53,15 +82,9 @@ export default function RootLayout() {
     <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <StatusBar style={isDarkColorScheme ? 'light' : 'dark'} />
-        <Stack>
-          <Stack.Screen
-            name='(tabs)'
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name='(auth)'
-            options={{ headerShown: false }}
-          />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
         <PortalHost />
       </GestureHandlerRootView>

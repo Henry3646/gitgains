@@ -12,6 +12,7 @@ import { FlatList } from 'react-native-gesture-handler'
 import { Button } from '../ui/button'
 import { KeyboardAwareFlatList } from 'react-native-keyboard-aware-scroll-view'
 import { supabase } from '~/lib/supabase'
+import getCurrentUserId from '~/lib/getCurrentUserId'
 
 interface Set {
     id: number;
@@ -38,75 +39,77 @@ const StartWorkoutModal = ({ modalVisible, setModalVisible, workout, exercises }
     setModalVisible(!modalVisible)
   }
 
-  const completeWorkout = () => {
-    const saveCompletedWorkout = async () => {
-        const totalWeight = exerciseData.reduce((acc: number, exercise: any) => {
+  const handleStartWorkout = async () => {
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) return
+
+      const { data, error } = await supabase
+        .from('Completed_Workouts')
+        .insert({
+          user_id: userId,
+          calories_burnt: 0,
+          total_time: currentTime,
+          total_weight: exerciseData.reduce((acc: number, exercise: any) => {
             return acc + exercise.sets.reduce((acc: number, set: any) => {
-                return acc + (set.reps || 0) * (set.weight || 0)
+              return acc + (set.reps || 0) * (set.weight || 0)
             }, 0)
-        }, 0)
-        const completedWorkout = {
-            calories_burnt: 0,
-            total_time: currentTime,
-            total_weight: totalWeight,
-            num_exercises: exercises.length,
-            workout_name: workout.name,
-            workout_id: workout.id,
-            user_id: 'e9cac5f4-62df-46bd-afc4-08d89aba2f51',
-            start_time: startTime.toISOString(),
-        }
-    
-        const { data, error } = await supabase
-            .from('Completed_Workouts')
-            .insert([completedWorkout])
-            .select()
-            .single()
-        if (error) {
-            console.error('Error inserting completed workout:', error)
-        }
-        if (data) {
-            console.log('Completed workout inserted:', data)
-            saveCompletedExercises(exerciseData, data.id)
-        }
+          }, 0),
+          num_exercises: exercises.length,
+          workout_name: workout.name,
+          workout_id: workout.id,
+          start_time: startTime.toISOString(),
+        })
+        .select()
+      
+      if (error) {
+        console.error('Error starting workout:', error)
+        return
+      }
+
+      if (data) {
+        console.log('Completed workout inserted:', data)
+        await saveCompletedExercises(exerciseData, data[0].id)
+      }
+    } catch (error) {
+      console.error('Error starting workout:', error)
     }
-
-    const saveCompletedExercises = async (exercisesData: any[], workoutId: any) => {
-        // Process all exercises and prepare for batch insert
-        const completedExercises = exercisesData.map(exerciseData => {
-          const completedSets = exerciseData.sets.filter((set: any) => set.reps > 0).length;
-          const totalReps = exerciseData.sets.reduce((acc: number, set: any) => acc + (parseInt(set.reps) || 0), 0);
-          const totalWeight = exerciseData.sets.reduce((acc: number, set: any) => 
-            acc + (set.reps || 0) * (set.weight || 0), 0);
-          const topSet = exerciseData.sets.reduce((acc: number, set: any) => 
-            Math.max(acc, set.weight || 0), 0);
-      
-          return {
-            exercise_id: exerciseData.id,
-            completed_workout_id: workoutId,
-            sets: completedSets,
-            reps: totalReps,
-            totalweight: totalWeight,
-            topset: topSet
-          };
-        });
-        console.log(completedExercises)
-        // Batch insert all exercises
-        const { data, error } = await supabase
-          .from('Completed_Exercises')
-          .insert(completedExercises)
-          .select();
-      
-        if (error) {
-          console.error('Error inserting completed exercises:', error);
-          return null;
-        }
-      
-        console.log('Completed exercises inserted:', data);
-        return data;
-      };
-
-    saveCompletedWorkout()
   }
+
+  const saveCompletedExercises = async (exercisesData: any[], workoutId: any) => {
+    // Process all exercises and prepare for batch insert
+    const completedExercises = exercisesData.map(exerciseData => {
+      const completedSets = exerciseData.sets.filter((set: any) => set.reps > 0).length;
+      const totalReps = exerciseData.sets.reduce((acc: number, set: any) => acc + (parseInt(set.reps) || 0), 0);
+      const totalWeight = exerciseData.sets.reduce((acc: number, set: any) => 
+        acc + (set.reps || 0) * (set.weight || 0), 0);
+      const topSet = exerciseData.sets.reduce((acc: number, set: any) => 
+        Math.max(acc, set.weight || 0), 0);
+  
+      return {
+        exercise_id: exerciseData.id,
+        completed_workout_id: workoutId,
+        sets: completedSets,
+        reps: totalReps,
+        totalweight: totalWeight,
+        topset: topSet
+      };
+    });
+    console.log(completedExercises)
+    // Batch insert all exercises
+    const { data, error } = await supabase
+      .from('Completed_Exercises')
+      .insert(completedExercises)
+      .select();
+  
+    if (error) {
+      console.error('Error inserting completed exercises:', error);
+      return null;
+    }
+  
+    console.log('Completed exercises inserted:', data);
+    return data;
+  };
 
   const handleRepsChange = (eid: any, sid: any, value: any) => {
     const newExerciseData = exerciseData.map((exercise: any) => {
@@ -196,7 +199,7 @@ const StartWorkoutModal = ({ modalVisible, setModalVisible, workout, exercises }
                 <AnimatedTimer 
                     time={currentTime} 
                     setTime={setCurrentTime} 
-                    onStop={completeWorkout} 
+                    onStop={handleStartWorkout} 
                     status={status} 
                     setStatus={setStatus}
                     setStartTime={setStartTime} />       
@@ -222,7 +225,7 @@ const StartWorkoutModal = ({ modalVisible, setModalVisible, workout, exercises }
                     enableResetScrollToCoords={false}
                 />
                 <View className='px-6'>
-                    <Button onPress={completeWorkout} >
+                    <Button onPress={handleStartWorkout} >
                         <TextUI>Complete Workout</TextUI>
                     </Button>
                 </View>

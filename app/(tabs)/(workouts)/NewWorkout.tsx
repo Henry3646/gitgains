@@ -47,68 +47,68 @@ const NewWorkout = () => {
   }
 
   const handleCreateWorkout = async () => {
-    let muscleGroupCount: { [key: string]: number } = {}
-    addedExercise.map((exercise) => {
-      exercise.muscle_group.forEach((group: string) => {
-        if (muscleGroupCount[group]) {
-          muscleGroupCount[group] += 1
-        } else {
-          muscleGroupCount[group] = 1
-        }
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) return
+
+      let muscleGroupCount: { [key: string]: number } = {}
+      addedExercise.map((exercise) => {
+        exercise.muscle_group.forEach((group: string) => {
+          if (muscleGroupCount[group]) {
+            muscleGroupCount[group] += 1
+          } else {
+            muscleGroupCount[group] = 1
+          }
+        })
       })
-    })
-    /// top 3 muscle groups
-    const muscleGroups = Object.keys(muscleGroupCount).sort((a, b) => muscleGroupCount[b] - muscleGroupCount[a]).slice(0, 3)
-    let totalSets = 0
+      /// top 3 muscle groups
+      const muscleGroups = Object.keys(muscleGroupCount).sort((a, b) => muscleGroupCount[b] - muscleGroupCount[a]).slice(0, 3)
+      let totalSets = 0
 
-    addedExercise.forEach((exercise) => {
-      totalSets += exercise.sets
-    })
-
-    // const userId = await getCurrentUserId()
-    const userId = 'e9cac5f4-62df-46bd-afc4-08d89aba2f51'
-
-    const workout = {
-      name: name,
-      desc: description,
-      muscle_groups: muscleGroups,
-      total_sets: totalSets,
-      user_id: userId
-    }
-
-    const { data, error } = await supabase
-      .from('Workouts')
-      .insert(workout)
-      .select('id')
-
-    if (error) {
-      console.error('Error inserting workout:', error)
-      return
-    }
-
-    if (data) {
-      const workoutId = data[0].id
-      addedExercise.forEach(async (exercise) => {
-        const { data, error } = await supabase
-          .from('Workout_Exercises')
-          .insert([
-            {
-              workout_id: workoutId,
-              exercise_id: exercise.id,
-              sets: exercise.sets,
-              reps: exercise.reps,
-            }
-          ])
-
-        if (error) {
-          console.error('Error inserting workout exercise:', error)
-          return
-        }
+      addedExercise.forEach((exercise) => {
+        totalSets += exercise.sets
       })
+
+      const workout = {
+        name: name,
+        desc: description,
+        muscle_groups: muscleGroups,
+        total_sets: totalSets,
+        user_id: userId
+      }
+
+      const { data, error } = await supabase
+        .from('Workouts')
+        .insert(workout)
+        .select('id')
+
+      if (error) throw error
+
+      if (data) {
+        const workoutId = data[0].id
+        addedExercise.forEach(async (exercise) => {
+          const { data, error } = await supabase
+            .from('Workout_Exercises')
+            .insert([
+              {
+                workout_id: workoutId,
+                exercise_id: exercise.id,
+                sets: exercise.sets,
+                reps: exercise.reps,
+              }
+            ])
+
+          if (error) {
+            console.error('Error inserting workout exercise:', error)
+            return
+          }
+        })
+      }
+
+      router.replace('/(tabs)/(workouts)/Workout')
+    } catch (error) {
+      console.error('Error creating workout:', error)
     }
-
-    router.replace('/(tabs)/(workouts)/Workout')
-
   }
 
   useEffect(() => {

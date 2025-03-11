@@ -1,19 +1,13 @@
-import { supabase } from '../lib/supabase.js';
+import { supabase } from './supabase'
 
-const getCurrentUserId = async () => {
-    const { data, error } = await supabase.auth.getSession();
+const getCurrentUserId = async (): Promise<string | null> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    return user?.id || null
+  } catch (error) {
+    console.error('Error getting current user:', error)
+    return null
+  }
+}
 
-    if (error) {
-      console.error('Error fetching session:', error);
-      return null;
-    }
-
-    const session = data?.session;
-    if (session?.user) {
-       // Set the userId after getting the session
-      return session.user.id     
-    }
-    return null;
-  };
-
-  export default getCurrentUserId
+export default getCurrentUserId

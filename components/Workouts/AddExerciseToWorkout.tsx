@@ -55,22 +55,25 @@ const AddExerciseToWorkout = ({modalVisible, setModalVisible, switchModal, exerc
     
   }
 
-  const getExercises = async (userId: string) => {
-    console.log('getting exercises')
-    const { data, error } = await supabase
-      .from('Exercises')
-      .select('*')
-      .eq('user_id', userId)
+  const getExercises = async () => {
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) return
 
-    if (error) {
-      console.error('Error fetching exercises:', error)
-      return
-    }
+      const { data, error } = await supabase
+        .from('Exercises')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name')
 
-    if (data) {
-      setAllExercises(data)
-      setFilteredExercises(data)
-      setSelectedExercises(selectedExercises)
+      if (error) {
+        console.error('Error fetching exercises:', error)
+        return
+      }
+
+      setExercises(data || [])
+    } catch (error) {
+      console.error('Error:', error)
     }
   }
   
@@ -100,9 +103,11 @@ const AddExerciseToWorkout = ({modalVisible, setModalVisible, switchModal, exerc
 
   useEffect(() => {
     getCurrentUserId().then((userId) => {
-        getExercises('e9cac5f4-62df-46bd-afc4-08d89aba2f51')
+      if (userId) {
+        getExercises()
+      }
     })
-    }, []) 
+  }, [])
 
   useEffect(() => {
     setSelectedExercises(exercises)

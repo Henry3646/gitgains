@@ -33,22 +33,23 @@ const CreateExercise = ({modalVisible, setModalVisible, switchModal}: {modalVisi
     }
 
     const handleCreateExercise = async () => {
-        const insertExercise = async (userId: any) => {
-        const { data, error } = await supabase
-            .from('Exercises')
-            .insert([
-                {
-                    name: name,
-                    muscle_group: muscleGroups,
-                    reps: parseInt(reps),
-                    sets: parseInt(sets),
-                    rest: parseInt(rest),
-                    desc: description,
-                    // user_id: userId
-                    user_id: 'e9cac5f4-62df-46bd-afc4-08d89aba2f51'
-                }
-            ])
-            .select()
+        const insertExercise = async (userId: string | null) => {
+            if (!userId) return
+
+            const { data, error } = await supabase
+                .from('Exercises')
+                .insert([
+                    {
+                        name: name,
+                        muscle_group: muscleGroups,
+                        reps: parseInt(reps),
+                        sets: parseInt(sets),
+                        rest: parseInt(rest),
+                        desc: description,
+                        user_id: userId
+                    }
+                ])
+                .select()
 
             if (error) {
                 console.error('Error inserting exercise:', error)
@@ -64,7 +65,12 @@ const CreateExercise = ({modalVisible, setModalVisible, switchModal}: {modalVisi
                 switchModal()
             }
         }
-        getCurrentUserId().then((userId) => insertExercise(userId))
+
+        getCurrentUserId().then((userId) => {
+            if (userId) {
+                insertExercise(userId)
+            }
+        })
     }
     
     useEffect(() => {

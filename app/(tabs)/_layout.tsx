@@ -34,14 +34,6 @@ export default function TabLayout() {
                 }}
             />    
             <Tabs.Screen
-                name='(stats)'
-                options={{
-                    headerShown: false,
-                    tabBarIcon: (({ focused }) => <Sparkles size={40} color={theme.text} strokeWidth={focused ? 1.5: 1}/>),
-                    tabBarShowLabel: false,
-                }}
-            />    
-            <Tabs.Screen
                 name='(profile)'
                 options={{
                     headerShown: false,

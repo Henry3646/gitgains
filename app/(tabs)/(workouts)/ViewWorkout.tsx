@@ -81,9 +81,10 @@ const ViewWorkout = () => {
   useEffect(() => {
     // Fetch workout by workoutId
     getCurrentUserId().then((userId) => {
-      getWorkout('e9cac5f4-62df-46bd-afc4-08d89aba2f51')
-    }
-    )
+      if (userId) {
+        getWorkout(userId)
+      }
+    })
   }, [])
   return (
     <View className='h-full w-full mt-14 '>

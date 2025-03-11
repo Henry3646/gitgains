@@ -16,6 +16,7 @@ import RecentWorkout from '~/components/Home/RecentWorkout'
 import { H1, H2, H3, H4 } from '~/components/ui/typography'
 import WorkoutsModal from '~/components/Home/WorkoutsModal'
 import { Skeleton } from '~/components/ui/skeleton'
+import getCurrentUserId from '~/lib/getCurrentUserId'
 
 const Home = () => {
   const [refreshing, setRefreshing] = useState(false)
@@ -117,18 +118,22 @@ const Home = () => {
   }
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      // const currentUserId = await getCurrentUserId()
-      const currentUserId = 'e9cac5f4-62df-46bd-afc4-08d89aba2f51' 
-      if (currentUserId) {
-        await getCompletedWorkoutsForUser(currentUserId)
-        await getMonthlySummaryDataForUser(currentUserId)
-      }
-    } 
     setLoading(true)
-    fetchUserData() 
+    const loadData = async () => {
+      try {
+        const userId = await getCurrentUserId()
+        if (!userId) return
+
+        await getCompletedWorkoutsForUser(userId)
+        await getMonthlySummaryDataForUser(userId)
+      } catch (error) {
+        console.error('Error loading data:', error)
+      }
+    }
+
+    loadData()
     setLoading(false)
-  }, []) 
+  }, [])
   return (
     <View>
       <WorkoutsModal modalVisible={modalVisible} setModalVisible={setModalVisible} />
@@ -149,7 +154,7 @@ const Home = () => {
                 <CardTitle>Workouts</CardTitle>
               </CardHeader>
               <CardContent>
-                <Text className='text-[22px]'>{totalCalories}<Text> kcal</Text></Text>
+                <Text className='text-[22px]'>{totalCalories}</Text>
               </CardContent>
             </Card>
             <Card className='w-[165px] h-[110px]'>
