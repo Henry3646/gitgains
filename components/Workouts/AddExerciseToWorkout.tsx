@@ -3,16 +3,14 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Text } from '~/components/ui/text'
 import { useColorScheme } from '~/lib/useColorScheme'
 import { NAV_THEME } from '~/lib/constants'
-import { X } from 'lucide-react-native'
+import { X, Search, Plus } from 'lucide-react-native'
 import { Button } from '~/components/ui/button'
-import { Search } from 'lucide-react-native'
 import { Input } from '~/components/ui/input'
-import { Plus } from 'lucide-react-native'
-import { Separator } from '../ui/separator'
 import getCurrentUserId from '~/lib/getCurrentUserId'
 import { supabase } from '~/lib/supabase'
 import ExerciseComponent from './ExerciseComponent'
 import { useFocusEffect } from 'expo-router'
+import { H2 } from '~/components/ui/typography'
 
 const AddExerciseToWorkout = ({modalVisible, setModalVisible, switchModal, exercises, setExercises}: {modalVisible: any, setModalVisible: any, switchModal: any, exercises: any, setExercises: any}) => {
   const { isDarkColorScheme } = useColorScheme()
@@ -23,14 +21,31 @@ const AddExerciseToWorkout = ({modalVisible, setModalVisible, switchModal, exerc
   const [selectedExercises, setSelectedExercises] = useState<any[]>([])
   const [refreshing, setRefreshing] = useState(false)
 
+  useEffect(() => {
+    if (modalVisible) {
+      setSelectedExercises([...exercises])
+    }
+  }, [modalVisible, exercises])
+
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredExercises(allExercises)
+    } else {
+      const filtered = allExercises.filter((exercise) =>
+        exercise.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      setFilteredExercises(filtered)
+    }
+  }, [searchQuery, allExercises])
+
   const refreshExercises = async () => {
     setRefreshing(true)
-    // const userId = await getCurrentUserId()
-    const userId = 'e9cac5f4-62df-46bd-afc4-08d89aba2f51'
+    const userId = await getCurrentUserId()
     const { data, error } = await supabase
       .from('Exercises')
       .select('*')
       .eq('user_id', userId)
+      .order('name')
 
     if (error) {
       console.error('Error fetching exercises:', error)
@@ -38,88 +53,51 @@ const AddExerciseToWorkout = ({modalVisible, setModalVisible, switchModal, exerc
     }
 
     if (data) {
-      
-      setFilteredExercises(data.filter((exercise) => exercise.name.includes(searchQuery)))
+      setAllExercises(data)
+      setFilteredExercises(data)
     }
-    // setSelectedExercises(exercises)
-    //   handleSearch(searchQuery)
     setRefreshing(false)
   }
 
   const handleSearch = (text: string) => {
     setSearchQuery(text)
-    console.log(text)
-    const filteredExercisesArray = allExercises.filter((exercise) => exercise.name.includes(text))
-    console.log('array', filteredExercisesArray)
-    setFilteredExercises(filteredExercisesArray)
-    
   }
 
-  const getExercises = async () => {
-    try {
-      const userId = await getCurrentUserId()
-      if (!userId) return
-
-      const { data, error } = await supabase
-        .from('Exercises')
-        .select('*')
-        .eq('user_id', userId)
-        .order('name')
-
-      if (error) {
-        console.error('Error fetching exercises:', error)
-        return
-      }
-
-      setExercises(data || [])
-    } catch (error) {
-      console.error('Error:', error)
-    }
-  }
-  
   const handleCheck = (exercise: any) => {
-    if (selectedExercises.includes(exercise)) {
-        console.log('removing ', exercise.name)
-        const newExercises = selectedExercises.filter((ex: any) => ex !== exercise)
-        setSelectedExercises(newExercises)
-    } else {
-        console.log('adding', exercise.name)
-        const newExercises = [...selectedExercises, exercise]
-        setSelectedExercises(newExercises)
-    }
+    setSelectedExercises(prev => {
+      const isSelected = prev.some(ex => ex.id === exercise.id)
+      if (isSelected) {
+        return prev.filter(ex => ex.id !== exercise.id)
+      } else {
+        return [...prev, exercise]
+      }
+    })
   }
 
   const handleDone = () => {
     setExercises(selectedExercises)
+    setModalVisible(false)
     setSearchQuery('')
-    setModalVisible(!modalVisible)
   }
 
   const handleClose = () => {
-    setSelectedExercises(exercises)
+    setModalVisible(false)
     setSearchQuery('')
-    setModalVisible(!modalVisible)
   }
 
   useEffect(() => {
-    getCurrentUserId().then((userId) => {
-      if (userId) {
-        getExercises()
-      }
-    })
-  }, [])
+    if (modalVisible) {
+      refreshExercises()
+    }
+  }, [modalVisible])
 
-  useEffect(() => {
-    setSelectedExercises(exercises)
-  }, [filteredExercises])
-    
-    useFocusEffect(
-        useCallback(() => {
-          console.log('useFocusEffect')
-          refreshExercises()
-          setSearchQuery('')
-        }, [])
-      )
+  useFocusEffect(
+    useCallback(() => {
+      if (modalVisible) {
+        refreshExercises()
+      }
+    }, [modalVisible])
+  )
 
   return (
     <Modal
@@ -127,73 +105,101 @@ const AddExerciseToWorkout = ({modalVisible, setModalVisible, switchModal, exerc
         transparent={true}
         visible={modalVisible}
         onShow={() => refreshExercises()}
-        onRequestClose={() => {
-          setModalVisible(!modalVisible)
-        }}
+        onRequestClose={handleClose}
     >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View className='w-full h-full flex-col mt-14'
-            style={{
-                backgroundColor: theme.background,
-            }}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View 
+          className='flex-1 bg-background'
+          style={{
+            backgroundColor: theme.background,
+          }}
         >
-            <X 
-                size={40} 
-                color={theme.text} 
-                strokeWidth={1.5} 
-                onPress={handleClose} 
-                style={{
-                    marginLeft: '3%'
-                }} 
-                
-            />
-            <View className='w-full ml-[4.5%] mt-5 flex-row items-center'>
-                <Search size={30} color={theme.text} strokeWidth={2}/>
-                <Input className='w-[78%] ml-[5%]' placeholder='Search...' value={searchQuery} onChangeText={(text) => handleSearch(text)} />
+          {/* Header */}
+          <View className='flex-row justify-between items-center px-4 pt-16 pb-2'>
+            <TouchableOpacity onPress={handleClose}>
+              <X size={28} color={theme.text} strokeWidth={2} />
+            </TouchableOpacity>
+            <H2 className='flex-1 text-center'>Add Exercises</H2>
+            <View style={{ width: 28 }} /> {/* Spacer for alignment */}
+          </View>
+
+          {/* Search Bar */}
+          <View className='px-4 py-3'>
+            <View className='flex-row items-center bg-muted rounded-lg px-3 py-2'>
+              <Search size={20} color={theme.text} strokeWidth={2} />
+              <Input 
+                className='flex-1 ml-2 border-0 bg-transparent' 
+                placeholder='Search exercises...' 
+                value={searchQuery} 
+                onChangeText={handleSearch}
+              />
             </View>
-            <View className='w-full items-center'>
-                <Separator className='my-6 w-[90%]' />
-            </View>
-            <View className='w-full items-center'>
-                <Button className='w-[90%]' onPress={() => switchModal()}>
-                    <Plus size={30} color={theme.background} strokeWidth={2}/>
-                </Button>    
-            </View>
-            <View className='w-full items-center'>
-                <Separator className='my-6 w-[90%]' />
-            </View>
-            <ScrollView
-                className='w-full h-[30%]'
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={refreshExercises}
-                    />
-                }
+          </View>
+
+          {/* Create New Exercise Button */}
+          <View className='px-4 py-2'>
+            <Button 
+              className='w-full flex-row justify-center items-center gap-2' 
+              variant="outline"
+              onPress={switchModal}
             >
-                <View className='flex-col w-full items-center h-[90%] '>
-                    {filteredExercises.length > 0 ?
-                        <View className='w-[90%] gap-4'>
-                        {filteredExercises.map((exercise) => (
-                            <TouchableOpacity key={exercise.id} onPress={() => handleCheck(exercise)} className='w-full items-center'>
-                                <ExerciseComponent  exercise={exercise} checked={selectedExercises} editable={false}/>
-                            </TouchableOpacity>
-                        ))}
-                        </View>
-                        :
-                        <Text>No exercises found...</Text>
-                    }
-                </View>
-                <View className='h-[125px]' />
-            </ScrollView>
-            <View className='absolute bottom-24 items-center w-full'>
-            <Button className='w-[90%] mt-4' onPress={handleDone}>
-                <Text>Done</Text>
+              <Plus size={20} color={theme.text} strokeWidth={2} />
+              <Text>Create New Exercise</Text>
             </Button>
+          </View>
+
+          {/* Exercise List */}
+          <ScrollView
+            className='flex-1 px-4'
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={refreshExercises}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+          >
+            <View className='gap-3 pb-32'>
+              {filteredExercises.length > 0 ? (
+                filteredExercises.map((exercise) => {
+                  const index = selectedExercises.findIndex(ex => ex.id === exercise.id)
+                  return (
+                    <TouchableOpacity 
+                      key={exercise.id} 
+                      onPress={() => handleCheck(exercise)} 
+                      className='w-full'
+                    >
+                      <ExerciseComponent 
+                        exercise={exercise} 
+                        checked={index !== -1}
+                        editable={false}
+                        orderNumber={index !== -1 ? index + 1 : undefined}
+                      />
+                    </TouchableOpacity>
+                  )
+                })
+              ) : (
+                <View className='flex-1 items-center justify-center py-8'>
+                  <Text className='text-muted-foreground'>No exercises found</Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+
+          {/* Bottom Action Button */}
+          <View className='absolute bottom-0 left-0 right-0 p-4 bg-background border-t border-border'>
+            <Button 
+              className='w-full' 
+              onPress={handleDone}
+              disabled={selectedExercises.length === 0}
+            >
+              <Text className='font-medium'>
+                Add {selectedExercises.length} {selectedExercises.length === 1 ? 'Exercise' : 'Exercises'}
+              </Text>
+            </Button>
+          </View>
         </View>
-        </View>
-        
-        </TouchableWithoutFeedback>
+      </TouchableWithoutFeedback>
     </Modal>
   )
 }

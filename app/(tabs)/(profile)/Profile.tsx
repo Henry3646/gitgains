@@ -1,4 +1,4 @@
-import { View, ScrollView, Dimensions, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native'
+import { View, ScrollView, Dimensions, Modal, TouchableWithoutFeedback, Keyboard, RefreshControl } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { useColorScheme } from '~/lib/useColorScheme'
 import { Text } from '~/components/ui/text'
@@ -12,6 +12,7 @@ import { NAV_THEME } from '~/lib/constants'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { BarChart, LineChart } from 'react-native-gifted-charts'
+import { Skeleton } from '~/components/ui/skeleton'
 
 interface WorkoutStreak {
   currentStreak: number
@@ -64,10 +65,92 @@ interface WeightEntry {
   weight: number
 }
 
+type TimeFrame = '1mo' | '6mo' | '1year'
+
 const MONTH_ABBREVIATIONS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ]
+
+const LoadingSkeleton = () => {
+  return (
+    <>
+      {/* Streak Section Skeleton */}
+      <View className='bg-card rounded-lg p-4 mb-6'>
+        <View className='flex-row items-center mb-2 gap-2'>
+          <Skeleton className='w-5 h-5 rounded-full' />
+          <Skeleton className='w-32 h-6' />
+        </View>
+        <View className='flex-row justify-between mt-2'>
+          {[1, 2, 3].map((i) => (
+            <View key={i}>
+              <Skeleton className='w-20 h-4 mb-1' />
+              <Skeleton className='w-16 h-6' />
+            </View>
+          ))}
+        </View>
+        <Skeleton className='w-40 h-4 mt-2' />
+      </View>
+
+      {/* Workout Frequency Skeleton */}
+      <View className='bg-card rounded-lg p-4 mb-6'>
+        <View className='flex-row items-center mb-6 gap-2'>
+          <Skeleton className='w-5 h-5 rounded-full' />
+          <Skeleton className='w-48 h-6' />
+        </View>
+        <View className='h-[150px] flex-row justify-between items-end'>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+            <Skeleton key={i} className='w-3 h-[30%] rounded-t' />
+          ))}
+        </View>
+      </View>
+
+      {/* Weight History Skeleton */}
+      <View className='bg-card rounded-lg p-4 mb-6'>
+        <View className='flex-row items-center justify-between mb-6'>
+          <View className='flex-row items-center gap-2'>
+            <Skeleton className='w-5 h-5 rounded-full' />
+            <Skeleton className='w-32 h-6' />
+          </View>
+          <Skeleton className='w-24 h-9' />
+        </View>
+        <View className='flex-row justify-between mb-4'>
+          {['1mo', '6mo', '1year'].map((timeFrame) => (
+            <Skeleton key={timeFrame} className='flex-1 mx-1 h-9' />
+          ))}
+        </View>
+        <View className='h-[150px] flex-row justify-between items-end'>
+          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <Skeleton key={i} className='w-1 h-[40%] rounded-t' />
+          ))}
+        </View>
+      </View>
+
+      {/* Personal Records Skeleton */}
+      <View className='bg-card rounded-lg p-4 mb-6'>
+        <View className='flex-row items-center mb-2 gap-2'>
+          <Skeleton className='w-5 h-5 rounded-full' />
+          <Skeleton className='w-40 h-6' />
+        </View>
+        {[1, 2, 3].map((i) => (
+          <View key={i} className='py-4 border-b border-border'>
+            <View className='flex-row justify-between items-center'>
+              <Skeleton className='w-32 h-6' />
+              <Skeleton className='w-16 h-6' />
+            </View>
+            <View className='flex-row justify-between items-center mt-1'>
+              <Skeleton className='w-24 h-4' />
+              <Skeleton className='w-12 h-4' />
+            </View>
+          </View>
+        ))}
+      </View>
+
+      {/* Sign Out Button Skeleton */}
+      <Skeleton className='w-full h-10' />
+    </>
+  )
+}
 
 const Profile = () => {
   const { isDarkColorScheme } = useColorScheme()
@@ -84,6 +167,8 @@ const Profile = () => {
   const [weightHistory, setWeightHistory] = useState<WeightEntry[]>([])
   const [showAddWeightModal, setShowAddWeightModal] = useState(false)
   const [newWeight, setNewWeight] = useState('')
+  const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>('1mo')
+  const [refreshing, setRefreshing] = useState(false)
 
   const calculateStreak = async () => {
     try {
@@ -113,15 +198,23 @@ const Profile = () => {
       let longestStreak = 0
       let currentCount = 0
       let lastDate = new Date(typedWorkouts[0].start_time)
+      lastDate.setHours(0, 0, 0, 0) // Normalize to start of day
 
       // Calculate streaks
       for (let i = 0; i < typedWorkouts.length; i++) {
         const workoutDate = new Date(typedWorkouts[i].start_time)
+        workoutDate.setHours(0, 0, 0, 0) // Normalize to start of day
+
+        // Skip if it's the same day as the last workout
+        if (i > 0 && workoutDate.getTime() === lastDate.getTime()) {
+          continue
+        }
+
         const dayDiff = Math.floor(
           (lastDate.getTime() - workoutDate.getTime()) / (1000 * 60 * 60 * 24)
         )
 
-        if (dayDiff <= 1) {
+        if (i === 0 || dayDiff <= 1) {
           currentCount++
           if (currentCount > longestStreak) {
             longestStreak = currentCount
@@ -134,8 +227,12 @@ const Profile = () => {
 
       // Check if current streak is still active (within last 24 hours)
       const now = new Date()
+      now.setHours(0, 0, 0, 0) // Normalize to start of day
+      const lastWorkoutDate = new Date(typedWorkouts[0].start_time)
+      lastWorkoutDate.setHours(0, 0, 0, 0) // Normalize to start of day
+      
       const lastWorkoutDiff = Math.floor(
-        (now.getTime() - new Date(typedWorkouts[0].start_time).getTime()) / (1000 * 60 * 60 * 24)
+        (now.getTime() - lastWorkoutDate.getTime()) / (1000 * 60 * 60 * 24)
       )
       currentStreak = lastWorkoutDiff <= 1 ? currentCount : 0
 
@@ -292,6 +389,23 @@ const Profile = () => {
     }
   }
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true)
+    try {
+      const streak = await calculateStreak()
+      const records = await fetchPersonalRecords()
+      await fetchMonthlyWorkouts()
+      await fetchWeightHistory()
+      
+      if (streak) setStreakData(streak)
+      setPersonalRecords(records)
+    } catch (error) {
+      console.error('Error refreshing data:', error)
+    } finally {
+      setRefreshing(false)
+    }
+  }, [])
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true)
@@ -338,174 +452,245 @@ const Profile = () => {
     }))
   }
 
-  const getLineData = () => {
-    if (weightHistory.length === 0) return []
+  const getFilteredWeightHistory = () => {
+    const now = new Date()
+    const filteredData = weightHistory.filter(entry => {
+      const entryDate = new Date(entry.created_at)
+      const monthsAgo = now.getMonth() - entryDate.getMonth() + 
+        (12 * (now.getFullYear() - entryDate.getFullYear()))
+      
+      switch (selectedTimeFrame) {
+        case '1mo':
+          return monthsAgo <= 1
+        case '6mo':
+          return monthsAgo <= 6
+        case '1year':
+          return monthsAgo <= 12
+        default:
+          return true
+      }
+    })
+    return filteredData
+  }
 
-    return weightHistory.map((entry) => ({
+  const getLineData = () => {
+    const filteredData = getFilteredWeightHistory()
+    if (filteredData.length === 0) return []
+
+    // Calculate how many points to show labels for based on the time frame
+    const labelInterval = selectedTimeFrame === '1mo' ? 2 : 
+                         selectedTimeFrame === '6mo' ? 3 : 4
+
+    return filteredData.map((entry, index) => ({
       value: entry.weight,
-      date: new Date(entry.created_at).toLocaleDateString(),
-      dataPointText: entry.weight.toString()
+      date: new Date(entry.created_at),
+      dataPointText: entry.weight.toString(),
+      // Only show label for every nth point to prevent overlap
+      label: index % labelInterval === 0 ? `${MONTH_ABBREVIATIONS[new Date(entry.created_at).getMonth()]} ${new Date(entry.created_at).getDate()}` : ''
     }))
   }
 
   return (
-    <ScrollView className='flex-1 '>
-      <View className='mt-14 px-4'>
-        <View className='absolute top-0 right-0 mr-2 mt-6 z-10'>
-          <ThemeToggle />
-        </View>
-        
-        <H2 className='mb-6'>Profile</H2>
-
-        {/* Streak Section */}
-        <View className='bg-card rounded-lg p-4 mb-6'>
-          <View className='flex-row items-center mb-2 gap-2'>
-            <Trophy size={20} className='text-primary mr-2' color={theme.text} />
-            <H3>Workout Streaks</H3>
-          </View>
-          <View className='flex-row justify-between mt-2'>
-            <View>
-              <Text className='text-muted-foreground'>Current Streak</Text>
-              <Text className='text-xl font-bold'>{streakData.currentStreak} days</Text>
-            </View>
-            <View>
-              <Text className='text-muted-foreground'>Longest Streak</Text>
-              <Text className='text-xl font-bold'>{streakData.longestStreak} days</Text>
-            </View>
-            <View>
-              <Text className='text-muted-foreground'>Total Workouts</Text>
-              <Text className='text-xl font-bold'>{streakData.totalWorkouts}</Text>
-            </View>
-          </View>
-          {streakData.lastWorkoutDate && (
-            <Text className='text-muted-foreground mt-2'>
-              Last workout: {new Date(streakData.lastWorkoutDate).toLocaleDateString()}
-            </Text>
-          )}
-        </View>
-
-        {/* Workout Frequency */}
-        <View className='bg-card rounded-lg p-4 mb-6'>
-          <View className='flex-row items-center mb-6 gap-2'>
-            <BarChart2 size={20} className='text-primary mr-2' color={theme.text} />
-            <H3>Workout Frequency {new Date().getFullYear()}</H3>
-          </View>
-          <View className='mt-4'>
-            <BarChart
-              data={getBarData()}
-              barWidth={barWidth - 4}
-              spacing={2}
-              hideRules
-              xAxisLabelTextStyle={{ color: theme.text, fontSize: 12 }}
-              yAxisTextStyle={{ color: theme.text, fontSize: 12 }}
-              noOfSections={5}
-              maxValue={Math.max(...monthlyWorkouts.map(m => m.count))}
-            />
+    <ScrollView 
+      className='flex-1'
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={theme.primary}
+          colors={[theme.primary]}
+          progressBackgroundColor={theme.card}
+          style={{ backgroundColor: 'transparent' }}
+        />
+      }
+    >
+      <View className='pt-16 px-4'>
+        <View className='flex-row justify-between items-center mb-4'>
+          <H2 className='w-full'>Profile</H2>
+          <View className='absolute top-4 right-0'>
+            <ThemeToggle />     
           </View>
         </View>
-
-        {/* Weight History */}
-        <View className='bg-card rounded-lg p-4 mb-6'>
-          <View className='flex-row items-center justify-between mb-6'>
-            <View className='flex-row items-center gap-2'>
-              <Activity size={20} className='text-primary mr-2' color={theme.text} />
-              <H3>Weight History</H3>
-            </View>
-            <Button variant="outline" onPress={() => setShowAddWeightModal(true)}>
-              <Text>Add Weight</Text>
-            </Button>
-          </View>
-          <View className='mt-4'>
-            {weightHistory.length > 0 ? (
-              <LineChart
-                data={getLineData()}
-                color={theme.primary}
-                hideDataPoints
-                thickness={2}
-                hideRules
-                xAxisLabelTextStyle={{ color: theme.text, fontSize: 12 }}
-                yAxisTextStyle={{ color: theme.text, fontSize: 12 }}
-                noOfSections={4}
-              />
-            ) : (
-              <View className='h-[150px] items-center justify-center'>
-                <Text className='text-muted-foreground'>No weight entries yet</Text>
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : (
+          <>
+            {/* Streak Section */}
+            <View className='bg-card rounded-lg p-4 mb-6'>
+              <View className='flex-row items-center mb-2 gap-2'>
+                <Trophy size={20} className='text-primary mr-2' color={theme.text} />
+                <H3>Workout Streaks</H3>
               </View>
-            )}
-          </View>
-        </View>
-
-        {/* Personal Records */}
-        <View className='bg-card rounded-lg p-4 mb-6'>
-          <View className='flex-row items-center mb-2 gap-2'>
-            <TrendingUp size={20} className='text-primary mr-2' color={theme.text} />
-            <H3>Personal Records</H3>
-          </View>
-          {personalRecords.map((record) => (
-            <View 
-              key={`${record.exerciseName}-${record.date}`}
-              className='py-4 border-b border-border'
-            >
-              <View className='flex-row justify-between items-center'>
-                <Text className='font-medium text-lg'>{record.exerciseName}</Text>
-                <Text className='text-lg font-bold'>{record.topSet} lbs</Text>
+              <View className='flex-row justify-between mt-2'>
+                <View>
+                  <Text className='text-muted-foreground'>Current Streak</Text>
+                  <Text className='text-xl font-bold'>{streakData.currentStreak} days</Text>
+                </View>
+                <View>
+                  <Text className='text-muted-foreground'>Longest Streak</Text>
+                  <Text className='text-xl font-bold'>{streakData.longestStreak} days</Text>
+                </View>
+                <View>
+                  <Text className='text-muted-foreground'>Total Workouts</Text>
+                  <Text className='text-xl font-bold'>{streakData.totalWorkouts}</Text>
+                </View>
               </View>
-              <View className='flex-row justify-between items-center mt-1'>
-                <Text className='text-muted-foreground text-sm'>
-                  {new Date(record.date).toLocaleDateString()}
+              {streakData.lastWorkoutDate && (
+                <Text className='text-muted-foreground mt-2'>
+                  Last workout: {new Date(streakData.lastWorkoutDate).toLocaleDateString()}
                 </Text>
-                {record.improvement && (
-                  <Text className={record.improvement > 0 ? 'text-green-500' : 'text-red-500'}>
-                    {record.improvement > 0 ? '+' : ''}{record.improvement} lbs
-                  </Text>
+              )}
+            </View>
+
+            {/* Workout Frequency */}
+            <View className='bg-card rounded-lg p-4 mb-6'>
+              <View className='flex-row items-center mb-6 gap-2'>
+                <BarChart2 size={20} className='text-primary mr-2' color={theme.text} />
+                <H3>Workout Frequency {new Date().getFullYear()}</H3>
+              </View>
+              <View className='mt-4'>
+                <BarChart
+                  data={getBarData()}
+                  barWidth={barWidth - 4}
+                  spacing={2}
+                  hideRules
+                  xAxisLabelTextStyle={{ color: theme.text, fontSize: 12 }}
+                  yAxisTextStyle={{ color: theme.text, fontSize: 12 }}
+                  noOfSections={5}
+                  maxValue={Math.max(...monthlyWorkouts.map(m => m.count))}
+                />
+              </View>
+            </View>
+
+            {/* Weight History */}
+            <View className='bg-card rounded-lg p-4 mb-6'>
+              <View className='flex-row items-center justify-between mb-6'>
+                <View className='flex-row items-center gap-2'>
+                  <Activity size={20} className='text-primary mr-2' color={theme.text} />
+                  <H3>Weight History</H3>
+                </View>
+                <Button variant="outline" onPress={() => setShowAddWeightModal(true)}>
+                  <Text>Add Weight</Text>
+                </Button>
+              </View>
+              <View className='flex-row justify-between mb-4'>
+                {(['1mo', '6mo', '1year'] as TimeFrame[]).map((timeFrame) => (
+                  <Button
+                    key={timeFrame}
+                    variant={selectedTimeFrame === timeFrame ? "default" : "outline"}
+                    onPress={() => setSelectedTimeFrame(timeFrame)}
+                    className='flex-1 mx-1'
+                  >
+                    <Text>{timeFrame}</Text>
+                  </Button>
+                ))}
+              </View>
+              <View className='mt-4'>
+                {weightHistory.length > 0 ? (
+                  <LineChart
+                    data={getLineData()}
+                    color={theme.primary}
+                    hideDataPoints={false}
+                    thickness={2}
+                    hideRules
+                    xAxisLabelTextStyle={{ color: theme.text, fontSize: 12 }}
+                    yAxisTextStyle={{ color: theme.text, fontSize: 12 }}
+                    noOfSections={4}
+                    xAxisLabelsVerticalShift={10}
+                    xAxisLabelsHeight={30}
+                    spacing={40}
+                    initialSpacing={20}
+                    endSpacing={20}
+                    maxValue={Math.max(...getFilteredWeightHistory().map(entry => entry.weight))}
+                    dataPointsColor={theme.primary}
+                    dataPointsRadius={4}
+                    dataPointsWidth={2}
+                    dataPointsHeight={2}
+                    focusEnabled
+                    showFractionalValues
+                  />
+                ) : (
+                  <View className='h-[150px] items-center justify-center'>
+                    <Text className='text-muted-foreground'>No weight entries yet</Text>
+                  </View>
                 )}
               </View>
             </View>
-          ))}
-        </View>
 
-        {/* Add Weight Modal */}
-        <Modal
-          animationType='slide'
-          transparent={true}
-          visible={showAddWeightModal}
-          onRequestClose={() => setShowAddWeightModal(false)}
-        >
-          <TouchableWithoutFeedback onPress={() => {
-            Keyboard.dismiss()
-            setShowAddWeightModal(false)
-          }}>
-            <View className='flex-1 justify-center items-center bg-black/50'>
-              <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
-                <View className='bg-card w-[80%] rounded-lg p-4'>
-                  <H3 className='mb-4'>Add Weight Entry</H3>
-                  <View className='mb-4'>
-                    <Label>Weight (lbs)</Label>
-                    <Input
-                      keyboardType='decimal-pad'
-                      value={newWeight}
-                      onChangeText={setNewWeight}
-                      placeholder='Enter weight'
-                    />
+            {/* Personal Records */}
+            <View className='bg-card rounded-lg p-4 mb-6'>
+              <View className='flex-row items-center mb-2 gap-2'>
+                <TrendingUp size={20} className='text-primary mr-2' color={theme.text} />
+                <H3>Personal Records</H3>
+              </View>
+              {personalRecords.map((record) => (
+                <View 
+                  key={`${record.exerciseName}-${record.date}`}
+                  className='py-4 border-b border-border'
+                >
+                  <View className='flex-row justify-between items-center'>
+                    <Text className='font-medium text-lg'>{record.exerciseName}</Text>
+                    <Text className='text-lg font-bold'>{record.topSet} lbs</Text>
                   </View>
-                  <View className='flex-row justify-end gap-2'>
-                    <Button variant="outline" onPress={() => setShowAddWeightModal(false)}>
-                      <Text>Cancel</Text>
-                    </Button>
-                    <Button onPress={addWeightEntry}>
-                      <Text>Save</Text>
-                    </Button>
+                  <View className='flex-row justify-between items-center mt-1'>
+                    <Text className='text-muted-foreground text-sm'>
+                      {new Date(record.date).toLocaleDateString()}
+                    </Text>
+                    {record.improvement && (
+                      <Text className={record.improvement > 0 ? 'text-green-500' : 'text-red-500'}>
+                        {record.improvement > 0 ? '+' : ''}{record.improvement} lbs
+                      </Text>
+                    )}
                   </View>
                 </View>
-              </TouchableWithoutFeedback>
+              ))}
             </View>
-          </TouchableWithoutFeedback>
-        </Modal>
 
-        {/* Sign Out Button */}
-        <Button onPress={() => supabase.auth.signOut()}>
-          <Text>Sign Out</Text>
-        </Button>
+            {/* Add Weight Modal */}
+            <Modal
+              animationType='slide'
+              transparent={true}
+              visible={showAddWeightModal}
+              onRequestClose={() => setShowAddWeightModal(false)}
+            >
+              <TouchableWithoutFeedback onPress={() => {
+                Keyboard.dismiss()
+                setShowAddWeightModal(false)
+              }}>
+                <View className='flex-1 justify-center items-center bg-black/50'>
+                  <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+                    <View className='bg-card w-[80%] rounded-lg p-4'>
+                      <H3 className='mb-4'>Add Weight Entry</H3>
+                      <View className='mb-4'>
+                        <Label>Weight (lbs)</Label>
+                        <Input
+                          keyboardType='decimal-pad'
+                          value={newWeight}
+                          onChangeText={setNewWeight}
+                          placeholder='Enter weight'
+                          autoFocus={true}
+                        />
+                      </View>
+                      <View className='flex-row justify-end gap-2'>
+                        <Button variant="outline" onPress={() => setShowAddWeightModal(false)}>
+                          <Text>Cancel</Text>
+                        </Button>
+                        <Button onPress={addWeightEntry}>
+                          <Text>Save</Text>
+                        </Button>
+                      </View>
+                    </View>
+                  </TouchableWithoutFeedback>
+                </View>
+              </TouchableWithoutFeedback>
+            </Modal>
+
+            {/* Sign Out Button */}
+            <Button onPress={() => supabase.auth.signOut()}>
+              <Text>Sign Out</Text>
+            </Button>
+          </>
+        )}
       </View>
     </ScrollView>
   )

@@ -8,6 +8,8 @@ const Layout = () => {
         <Stack.Screen name="Workout" options={{ headerShown: false }}/>
         <Stack.Screen name="NewWorkout" options={{ headerShown: false }}/>
         <Stack.Screen name="ViewWorkout" options={{ headerShown: false }}/>
+        <Stack.Screen name="EditExercise" options={{ headerShown: false }}/>
+        <Stack.Screen name="EditWorkout" options={{ headerShown: false }}/>
     </Stack>
   )
 }

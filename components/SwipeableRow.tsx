@@ -38,8 +38,8 @@ const SwipeableRow = ({ children, onEdit, onDelete }: { children: any; onEdit: (
           width: 50,
           height: '100%',
           backgroundColor: theme.notification,
-          borderBottomRightRadius: 14,
-          borderTopRightRadius: 14,
+          borderBottomRightRadius: 8,
+          borderTopRightRadius: 8,
         }}
         onPress={onDelete}
       >
@@ -49,7 +49,7 @@ const SwipeableRow = ({ children, onEdit, onDelete }: { children: any; onEdit: (
   )
 
   return (
-    <GestureHandlerRootView className='w-[90%] mb-4 rounded-[14] flex-1' style={{ backgroundColor: theme.card }}>
+    <GestureHandlerRootView className='w-full mb-4 rounded-lg flex-1' style={{ backgroundColor: theme.card }}>
       {/* Use standard Swipeable but ensure child components use Animated */}
       <Swipeable renderRightActions={renderRightActions}>{children}</Swipeable>
     </GestureHandlerRootView>

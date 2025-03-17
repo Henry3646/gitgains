@@ -60,7 +60,7 @@ const Auth = () => {
           </View>
         )}
 
-        <View className='space-y-4'>
+        <View className='gap-2'>
           <Input
             placeholder='Email'
             value={email}
@@ -87,7 +87,7 @@ const Auth = () => {
 
           <TouchableOpacity 
             onPress={() => setIsLogin(!isLogin)}
-            className='py-2'
+            className='py-4'
           >
             <Text className='text-center text-primary'>
               {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}

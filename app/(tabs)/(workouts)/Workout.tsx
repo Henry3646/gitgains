@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useCallback} from 'react'
-import { ScrollView, RefreshControl, View } from 'react-native'
+import { ScrollView, RefreshControl, View, Alert } from 'react-native'
 import { useColorScheme } from '~/lib/useColorScheme'
 import { NAV_THEME } from '~/lib/constants'
 import { H2 } from '~/components/ui/typography'
@@ -64,19 +64,66 @@ const Workout = () => {
         })
         setLoading(false)
     }, [])
+
+  const handleEditWorkout = (workout: any) => {
+    router.push({ 
+      pathname: '/EditWorkout',
+      params: { workoutId: workout.id }
+    })
+  }
+
+  const handleDeleteWorkout = async (workout: any) => {
+    Alert.alert(
+      "Delete Workout",
+      "Are you sure you want to delete this workout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('Workouts')
+                .delete()
+                .eq('id', workout.id)
+
+              if (error) throw error
+
+              // Refresh the workouts list
+              const userId = await getCurrentUserId()
+              await getWorkoutsForUser(userId)
+            } catch (error) {
+              console.error('Error deleting workout:', error)
+              Alert.alert('Error', 'Failed to delete workout')
+            }
+          }
+        }
+      ]
+    )
+  }
+
   return (
-    <View className={`flex-col w-full h-full mt-14`}
+    <View className={`flex-col w-full h-full pt-16 px-4`}
             style={{
                 backgroundColor: theme.background,
             }}
         >
-            <H2 className='ml-[5%] pt-6'>Create Workout</H2>
-            <View className='w-full items-center'>
-                <Button className='w-[90%] mt-4' onPress={() => router.push({ pathname: '/(tabs)/(workouts)/NewWorkout' })}>
-                    <Plus size={30} color={theme.background} strokeWidth={2}/>
+            <H2 className=''>Create Workout</H2>
+            <View className='w-full items-center py-4'>
+                <Button 
+                    className='w-full flex-row justify-center items-center gap-2' 
+                    variant="outline" 
+                    onPress={() => router.push({ pathname: '/(tabs)/(workouts)/NewWorkout' })}
+                >
+                    <Plus size={20} color={theme.text} strokeWidth={2} />
+                    <Text>Create New Workout</Text>
                 </Button>
             </View>
-            <H2 className='ml-[5%] pt-6'>Saved Workouts</H2>
+            <H2 className=''>Saved Workouts</H2>
             <ScrollView
                 refreshControl={
                     <RefreshControl
@@ -93,7 +140,13 @@ const Workout = () => {
                     {workouts.length > 0 ?
                         <>
                         {workouts.map((workout: any) => (
-                            <SwipeableRow key={workout.id} children={<SavedWorkout  workout={workout} />} onEdit={() => console.log()} onDelete={() => console.log()} />
+                            <SwipeableRow 
+                                key={workout.id} 
+                                onEdit={() => handleEditWorkout(workout)} 
+                                onDelete={() => handleDeleteWorkout(workout)}
+                            >
+                                <SavedWorkout workout={workout} setModalVisible={() => {}} />
+                            </SwipeableRow>
                         ))}
                         </>
                         :

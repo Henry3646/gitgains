@@ -5,21 +5,21 @@ import { View } from 'react-native'
 import {
     Card,
     CardContent,
-    CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
-  } from '~/components/ui/card'
+} from '~/components/ui/card'
 import { Text } from '~/components/ui/text'
 import { useColorScheme } from '~/lib/useColorScheme'
 import { NAV_THEME } from '~/lib/constants'
+import { Calendar, Activity } from 'lucide-react-native'
 
 const MonthSum = () => {
-    const { colorScheme, isDarkColorScheme } = useColorScheme()
-    const theme = isDarkColorScheme ? NAV_THEME.dark : NAV_THEME.light;
+    const { isDarkColorScheme } = useColorScheme()
+    const theme = isDarkColorScheme ? NAV_THEME.dark : NAV_THEME.light
     const daysOfWeek = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
     const [daysGrid, setDaysGrid] = React.useState<(number | null)[][]>([])
     const [daysArray, setDaysArray] = React.useState<number[]>([])
+    const [totalWorkouts, setTotalWorkouts] = React.useState(0)
 
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
@@ -28,48 +28,48 @@ const MonthSum = () => {
 
     const createDaysGrid = () => {
         let month = new Date()
-        const firstDayOfMonth = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
-        const lastDayOfMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDay();
-        const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+        const firstDayOfMonth = new Date(month.getFullYear(), month.getMonth(), 1).getDay()
+        const lastDayOfMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDay()
+        const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
 
-        const daysGrid: (number | null)[][] = [];
-        let currentDay = 1;
+        const daysGrid: (number | null)[][] = []
+        let currentDay = 1
 
-        let week: (number | null)[] = [];
+        let week: (number | null)[] = []
         for (let i = 0; i < 7; i++) {
             if (i < firstDayOfMonth) {
-                week.push(null);
+                week.push(null)
             } else {
                 week.push(new Date(month.getFullYear(), month.getMonth(), i - firstDayOfMonth + 1).getDate())
                 currentDay++
             }
         }
-        daysGrid.push(week);
+        daysGrid.push(week)
 
         while (currentDay + 6 < daysInMonth) {
-            week = [];
+            week = []
             for (let i = 0; i < 7; i++) {
-                week.push(currentDay);
-                currentDay++;
+                week.push(currentDay)
+                currentDay++
             }
-            daysGrid.push(week);
+            daysGrid.push(week)
         }
 
-        week = [];
+        week = []
         for (let i = 0; i < 7; i++) {
             if (currentDay <= daysInMonth) {
-                week.push(currentDay);
-                currentDay++;
+                week.push(currentDay)
+                currentDay++
             } else {
-                week.push(null);
+                week.push(null)
             }
         }
-        daysGrid.push(week);
-        setDaysGrid(daysGrid);
+        daysGrid.push(week)
+        setDaysGrid(daysGrid)
     }  
 
     const getCompletedDays = async (userId: string) => {
-        const now = new Date();
+        const now = new Date()
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
         const { data, error } = await supabase
@@ -80,8 +80,8 @@ const MonthSum = () => {
             .lte('start_time', endOfMonth)
 
         if (error) {
-            console.error('Error fetching completed workouts:', error);
-            return null;
+            console.error('Error fetching completed workouts:', error)
+            return null
         }
         if (data) {
             const daysArray = data.map((workout: any) => {
@@ -89,57 +89,85 @@ const MonthSum = () => {
                 return date.getDate()
             })
             setDaysArray(daysArray)
+            setTotalWorkouts(daysArray.length)
         }
-  }
+    }
 
+    useEffect(() => {
+        createDaysGrid()
+        getCurrentUserId().then((userId: any) => {
+            getCompletedDays(userId)
+        })
+    }, [])
 
-  useEffect(() => {
-    createDaysGrid()
-    getCurrentUserId().then((userId: any) => {
-      getCompletedDays('e9cac5f4-62df-46bd-afc4-08d89aba2f51')
-    })
-  }, [])
+    return (
+        <Card className='w-full'>
+            <CardHeader className='pb-2'>
+                <View className='flex-row items-center justify-between'>
+                    <View className='flex-row items-center gap-2'>
+                        <Calendar size={24} color={theme.primary} />
+                        <CardTitle className='text-xl'>{months[new Date().getMonth()]} {new Date().getFullYear()}</CardTitle>
+                    </View>
+                </View>
+            </CardHeader>
+            <CardContent>
+                {/* Days of Week Header */}
+                <View className='flex-row justify-between mb-3'>
+                    {daysOfWeek.map((day, index) => (
+                        <View key={index} className='w-[32px] items-center'>
+                            <Text className='text-sm font-medium text-muted-foreground'>{day}</Text>
+                        </View>
+                    ))}
+                </View>
 
-  
-
-  return (
-    <Card className='w-[90%]'>
-        <CardHeader>
-            <CardTitle>{months[new Date().getMonth()]} {new Date().getFullYear()}</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <View className='flex-col gap-3'>
-                {daysGrid.map((week, index) => (
-                    <View key={`week-${week}-${index}`} className='justify-around flex-row'>
-                    {week.map((value: any, dayIndex: any) => (
-                        <>
-                            {daysArray ?
+                {/* Calendar Grid */}
+                <View className='gap-1'>
+                    {daysGrid.map((week, index) => (
+                        <View key={`week-${index}`} className='flex-row justify-between'>
+                            {week.map((day, dayIndex) => (
                                 <View 
                                     key={`day-${dayIndex}-${index}`} 
-                                    className={`w-[20px] h-[20px] rounded`} 
-                                    style={{ 
-                                        backgroundColor: `${daysArray.includes(value) ? theme.text : 'transparent'}`, 
-                                        borderWidth: 2,
-                                        borderColor: `${daysGrid[index][dayIndex] ? theme.text : 'transparent'}`,
-                                    }}/>
-                            :
-                            <View key={`day-${dayIndex}-${index}`}></View>
-                            }
-                        </>
+                                    className='w-[32px] h-[32px] items-center justify-center'
+                                >
+                                    {day && (
+                                        <View 
+                                            className={`w-[28px] h-[28px] rounded-full items-center justify-center
+                                                ${daysArray.includes(day) 
+                                                    ? 'bg-primary' 
+                                                    : 'border border-border'
+                                                }`}
+                                        >
+                                            <Text 
+                                                className={`text-sm ${
+                                                    daysArray.includes(day) 
+                                                        ? 'text-primary-foreground font-medium' 
+                                                        : 'text-muted-foreground'
+                                                }`}
+                                            >
+                                                {day}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                            ))}
+                        </View>
                     ))}
+                </View>
+
+                {/* Legend */}
+                <View className='flex-row items-center justify-center gap-4 mt-4'>
+                    <View className='flex-row items-center gap-2'>
+                        <View className='w-3 h-3 rounded-full bg-primary' />
+                        <Text className='text-sm text-muted-foreground'>Workout Day</Text>
                     </View>
-                ))}
-            </View>
-            <View className='justify-around flex-row mt-4'>
-                {daysOfWeek.map((day, index) => (
-                    <View key={index} className=' w-[20px] items-center justify-center'>
-                        <Text className='text-[18px] font-bold'>{day}</Text>
+                    <View className='flex-row items-center gap-2'>
+                        <View className='w-3 h-3 rounded-full border border-border' />
+                        <Text className='text-sm text-muted-foreground'>Rest Day</Text>
                     </View>
-                ))}
-            </View>
-        </CardContent>
-    </Card>
-  )
-  }
+                </View>
+            </CardContent>
+        </Card>
+    )
+}
 
 export default MonthSum

@@ -1,74 +1,77 @@
 import { View, TouchableOpacity } from 'react-native'
-import React, { useEffect } from 'react'
+import React from 'react'
 import { Text } from '~/components/ui/text'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-  } from '~/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
+import { Separator } from '../ui/separator'
+import { Check, Square, SquareCheck } from 'lucide-react-native'
 import { useColorScheme } from '~/lib/useColorScheme'
 import { NAV_THEME } from '~/lib/constants'
-import { Ellipsis } from 'lucide-react-native'
-import { Badge } from '~/components/ui/badge'
-import { SquareCheck, Square } from 'lucide-react-native'
 
-const ExerciseComponent = ({exercise, checked, editable}: {exercise: any, checked: any, editable: any}) => {
-    const { isDarkColorScheme } = useColorScheme();
-    const theme = isDarkColorScheme ? NAV_THEME.dark : NAV_THEME.light;
-    const [included, setIncluded] = React.useState(false);
+interface Exercise {
+  id: string
+  name: string
+  sets: number
+  reps: number
+  rest: number
+  desc: string | null
+  muscle_group?: string
+}
 
-    useEffect(() => {
-        if (!editable) {
-            let check = false
-            checked.forEach((e: any) => {
-                if (e.id === exercise.id) {
-                    check = true
-                    setIncluded(true)
-                }
-            })
-            if (!check) {
-                setIncluded(false)
-            }
-        }
-    }, [checked]);
+interface ExerciseComponentProps {
+  exercise: Exercise
+  checked: boolean
+  editable: boolean
+  orderNumber?: number
+  onUpdate?: (updates: Partial<Exercise>) => void
+}
+
+const ExerciseComponent = ({ exercise, checked, editable, orderNumber, onUpdate }: ExerciseComponentProps) => {
+  const { isDarkColorScheme } = useColorScheme()
+  const theme = isDarkColorScheme ? NAV_THEME.dark : NAV_THEME.light
+
   return (
-    <Card className='w-[100%]'>
-            <CardHeader className='pb-0'>
-                <CardTitle>{exercise.name}</CardTitle>
-                <CardDescription numberOfLines={1} ellipsizeMode='tail' className='w-[80%]' >{exercise.desc}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <View className='flex-row py-2'>
-                    {exercise.muscle_group?.map((group: any) => (
-                        <Badge key={group} className='mr-4'>
-                            <Text>{group}</Text>
-                        </Badge>
-                    ))}
-                </View>
-                <View className='flex-row'>
-                    <Badge className='mr-4' >
-                        <Text>{exercise.sets} sets</Text>
-                    </Badge>
-                    <Badge className='mr-4'>
-                        <Text>{exercise.reps} reps</Text>
-                    </Badge>
-                </View>
-            </CardContent>
-            {editable ? (
-                <View className='absolute justify-center top-2 right-4'>
-                    <TouchableOpacity onPress={() => console.log(checked)}>
-                        <Ellipsis size={30} color={theme.text} />
-                    </TouchableOpacity>
-                </View>
-            ) : (
-                <View className='absolute right-4 justify-center h-full'>
-                {included ? <SquareCheck size={50} color={theme.text} /> : <Square size={50} color={theme.text} />}
-                </View>
-            )}
-        </Card>
+    <Card className=''>
+      <CardHeader className='pb-1'>
+        <View className='flex-row justify-between items-start'>
+          <View className='flex-1'>
+            <CardTitle>{exercise.name}</CardTitle>
+            <CardDescription>{exercise.desc}</CardDescription>
+          </View>
+          {checked ? (
+            <View className='ml-4 w-6 h-6 rounded-full bg-primary/20 items-center justify-center'>
+              <Text className='text-primary font-medium'>{orderNumber}</Text>
+            </View>
+          ) : (
+            <Square size={24} color={theme.text} className='ml-4' />
+          )}
+        </View>
+      </CardHeader>
+      <CardContent className='gap-2'>
+        <View className='flex-row items-center gap-2'>
+          <View className='flex-row items-center gap-1'>
+            <View className='w-2 h-2 rounded-full bg-primary/20' />
+            <Text className='text-sm text-muted-foreground'>{exercise.sets} sets</Text>
+          </View>
+          <Separator orientation='vertical' className='h-4' />
+          <View className='flex-row items-center gap-1'>
+            <View className='w-2 h-2 rounded-full bg-primary/20' />
+            <Text className='text-sm text-muted-foreground'>{exercise.reps} reps</Text>
+          </View>
+          <Separator orientation='vertical' className='h-4' />
+          <View className='flex-row items-center gap-1'>
+            <View className='w-2 h-2 rounded-full bg-primary/20' />
+            <Text className='text-sm text-muted-foreground'>{exercise.rest}s rest</Text>
+          </View>
+        </View>
+        {exercise.muscle_group && (
+          <View className='flex-row gap-2'>
+            <View className='px-2 py-1 rounded-full bg-primary/10'>
+              <Text className='text-xs text-primary capitalize'>{exercise.muscle_group}</Text>
+            </View>
+          </View>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

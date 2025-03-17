@@ -1,32 +1,31 @@
-import { View, Text, Modal, ScrollView, Platform } from 'react-native'
-import React, { useState, useEffect} from 'react'
+import { View, Modal, Platform } from 'react-native'
+import React, { useState, useEffect } from 'react'
 import { useColorScheme } from '~/lib/useColorScheme'
 import { NAV_THEME } from '~/lib/constants'
 import { X } from 'lucide-react-native'
 import AnimatedTimer from './AnimatedTimer'
-import { H2 } from '../ui/typography'
-import { Text as TextUI } from '../ui/text'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion'
+import { H2 } from '~/components/ui/typography'
+import { Text } from '~/components/ui/text'
 import ExerciseCard from './ExerciseCard'
-import { FlatList } from 'react-native-gesture-handler'
-import { Button } from '../ui/button'
+import { Button } from '~/components/ui/button'
 import { KeyboardAwareFlatList } from 'react-native-keyboard-aware-scroll-view'
 import { supabase } from '~/lib/supabase'
 import getCurrentUserId from '~/lib/getCurrentUserId'
+import { TouchableOpacity } from 'react-native-gesture-handler'
 
 interface Set {
-    id: number;
-    reps: number | null;
-    weight: number | null;
-  }
+  id: number;
+  reps: number | null;
+  weight: number | null;
+}
 
-  interface Exercise {
-    id: number;
-    sets: Set[];
-  }
+interface Exercise {
+  id: number;
+  sets: Set[];
+}
 
 const StartWorkoutModal = ({ modalVisible, setModalVisible, workout, exercises }:
-     {modalVisible: any, setModalVisible: any, workout: any, exercises: any}) => {
+  { modalVisible: any, setModalVisible: any, workout: any, exercises: any }) => {
   const { isDarkColorScheme } = useColorScheme()
   const theme = isDarkColorScheme ? NAV_THEME.dark : NAV_THEME.light
   const [loading, setLoading] = useState(false)
@@ -35,14 +34,21 @@ const StartWorkoutModal = ({ modalVisible, setModalVisible, workout, exercises }
   const [startTime, setStartTime] = useState(new Date())
   const [exerciseData, setExerciseData] = useState<Exercise[]>([])
 
-  const cancelWorkout = () => {
-    setModalVisible(!modalVisible)
+  const handleClose = () => {
+    setModalVisible(false)
   }
 
   const handleStartWorkout = async () => {
     try {
+      setLoading(true)
       const userId = await getCurrentUserId()
       if (!userId) return
+
+      const totalWeight = exerciseData.reduce((acc: number, exercise: any) => {
+        return acc + exercise.sets.reduce((setAcc: number, set: any) => {
+          return setAcc + (set.reps || 0) * (set.weight || 0)
+        }, 0)
+      }, 0)
 
       const { data, error } = await supabase
         .from('Completed_Workouts')
@@ -50,11 +56,7 @@ const StartWorkoutModal = ({ modalVisible, setModalVisible, workout, exercises }
           user_id: userId,
           calories_burnt: 0,
           total_time: currentTime,
-          total_weight: exerciseData.reduce((acc: number, exercise: any) => {
-            return acc + exercise.sets.reduce((acc: number, set: any) => {
-              return acc + (set.reps || 0) * (set.weight || 0)
-            }, 0)
-          }, 0),
+          total_weight: totalWeight,
           num_exercises: exercises.length,
           workout_name: workout.name,
           workout_id: workout.id,
@@ -62,29 +64,27 @@ const StartWorkoutModal = ({ modalVisible, setModalVisible, workout, exercises }
         })
         .select()
       
-      if (error) {
-        console.error('Error starting workout:', error)
-        return
-      }
+      if (error) throw error
 
       if (data) {
-        console.log('Completed workout inserted:', data)
         await saveCompletedExercises(exerciseData, data[0].id)
+        handleClose()
       }
     } catch (error) {
-      console.error('Error starting workout:', error)
+      console.error('Error completing workout:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
   const saveCompletedExercises = async (exercisesData: any[], workoutId: any) => {
-    // Process all exercises and prepare for batch insert
     const completedExercises = exercisesData.map(exerciseData => {
-      const completedSets = exerciseData.sets.filter((set: any) => set.reps > 0).length;
-      const totalReps = exerciseData.sets.reduce((acc: number, set: any) => acc + (parseInt(set.reps) || 0), 0);
+      const completedSets = exerciseData.sets.filter((set: any) => set.reps > 0).length
+      const totalReps = exerciseData.sets.reduce((acc: number, set: any) => acc + (parseInt(set.reps) || 0), 0)
       const totalWeight = exerciseData.sets.reduce((acc: number, set: any) => 
-        acc + (set.reps || 0) * (set.weight || 0), 0);
+        acc + (set.reps || 0) * (set.weight || 0), 0)
       const topSet = exerciseData.sets.reduce((acc: number, set: any) => 
-        Math.max(acc, set.weight || 0), 0);
+        Math.max(acc, set.weight || 0), 0)
   
       return {
         exercise_id: exerciseData.id,
@@ -93,145 +93,137 @@ const StartWorkoutModal = ({ modalVisible, setModalVisible, workout, exercises }
         reps: totalReps,
         totalweight: totalWeight,
         topset: topSet
-      };
-    });
-    console.log(completedExercises)
-    // Batch insert all exercises
-    const { data, error } = await supabase
+      }
+    })
+
+    const { error } = await supabase
       .from('Completed_Exercises')
       .insert(completedExercises)
-      .select();
   
     if (error) {
-      console.error('Error inserting completed exercises:', error);
-      return null;
+      console.error('Error inserting completed exercises:', error)
+      return null
     }
-  
-    console.log('Completed exercises inserted:', data);
-    return data;
-  };
+  }
 
   const handleRepsChange = (eid: any, sid: any, value: any) => {
-    const newExerciseData = exerciseData.map((exercise: any) => {
-        if (exercise.id === eid) {
-            const newSets = exercise.sets.map((set: any) => {
-                if (set.id === sid) {
-                    return {
-                        ...set,
-                        reps: value
-                    }
-                }
-                return set
-            })
-            return {
-                ...exercise,
-                sets: newSets
+    setExerciseData(prev => prev.map(exercise => {
+      if (exercise.id === eid) {
+        return {
+          ...exercise,
+          sets: exercise.sets.map(set => {
+            if (set.id === sid) {
+              return { ...set, reps: value }
             }
+            return set
+          })
         }
-        return exercise
-    })
-        setExerciseData(newExerciseData)
-    }
+      }
+      return exercise
+    }))
+  }
 
-    const handleWeightChange = (eid: any, sid: any, value: any) => {
-        const newExerciseData = exerciseData.map((exercise: any) => {
-            if (exercise.id === eid) {
-                const newSets = exercise.sets.map((set: any) => {
-                    if (set.id === sid) {
-                        return {
-                            ...set,
-                            weight: value
-                        }
-                    }
-                    return set
-                })
-                return {
-                    ...exercise,
-                    sets: newSets
-                }
+  const handleWeightChange = (eid: any, sid: any, value: any) => {
+    setExerciseData(prev => prev.map(exercise => {
+      if (exercise.id === eid) {
+        return {
+          ...exercise,
+          sets: exercise.sets.map(set => {
+            if (set.id === sid) {
+              return { ...set, weight: value }
             }
-            return exercise
-        })
-        setExerciseData(newExerciseData)
-    }
+            return set
+          })
+        }
+      }
+      return exercise
+    }))
+  }
 
   useEffect(() => {
-    //initializes exerciseData array with n rows for n exercises, where each row has x rows for x sets, each row for sets has reps and weight
-    const newExerciseData = (exercises.map((exercise: any) => {
-        return {
-            id: exercise.id,
-            sets: Array.from({length: exercise.sets}, (_, i) => {
-                return {
-                    id: i,
-                    reps: null,
-                    weight: null
-                }
-            })
-        }
-    }))
-    setExerciseData(newExerciseData)
-  }, [modalVisible])
+    if (modalVisible) {
+      const newExerciseData = exercises.map((exercise: any) => ({
+        id: exercise.id,
+        sets: Array.from({ length: exercise.sets }, (_, i) => ({
+          id: i,
+          reps: null,
+          weight: null
+        }))
+      }))
+      setExerciseData(newExerciseData)
+    }
+  }, [modalVisible, exercises])
 
-    return (
+  return (
     <Modal
-        animationType='slide'
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => {
-            cancelWorkout()
-        }}
-        >
-            <View className={`flex-col w-full h-full mt-14 pb-24`}
-            style={{
-                backgroundColor: theme.background,
-            }}
-        >
-            <X 
-                size={40} 
-                color={theme.text} 
-                strokeWidth={1.5} 
-                onPress={() => setModalVisible(!modalVisible)} 
-                style={{
-                    marginLeft: '3%'
-                }} 
-                
-            />
-                <AnimatedTimer 
-                    time={currentTime} 
-                    setTime={setCurrentTime} 
-                    onStop={handleStartWorkout} 
-                    status={status} 
-                    setStatus={setStatus}
-                    setStartTime={setStartTime} />       
-                <H2 className='mb-4' />
-                <KeyboardAwareFlatList
-                    data={exercises}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                      <ExerciseCard
-                        exercise={item}
-                        exerciseData={exerciseData.find((exercise: any) => exercise.id === item.id)} 
-                        handleRepChange={handleRepsChange} 
-                        handleWeightChange={handleWeightChange}
-                        status={status} 
-                      />
-                    )}
-                    enableOnAndroid={true}
-                    extraScrollHeight={Platform.select({ ios: 0, android: 25 })}
-                    keyboardOpeningTime={0}
-                    contentContainerStyle={{ paddingBottom: 20 }}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                    enableResetScrollToCoords={false}
-                />
-                <View className='px-6'>
-                    <Button onPress={handleStartWorkout} >
-                        <TextUI>Complete Workout</TextUI>
-                    </Button>
-                </View>
+      animationType='slide'
+      transparent={true}
+      visible={modalVisible}
+      onRequestClose={handleClose}
+    >
+      <View 
+        className='flex-1'
+        style={{ backgroundColor: theme.background }}
+      >
+        {/* Header */}
+        <View className='flex-row justify-between items-center px-4 pt-16 pb-2'>
+          <TouchableOpacity onPress={handleClose}>
+            <X size={28} color={theme.text} strokeWidth={2} />
+          </TouchableOpacity>
+          <H2 className='flex-1 text-center'>{workout?.name || 'Workout'}</H2>
+          <View style={{ width: 28 }} /> {/* Spacer for alignment */}
+        </View>
 
+        {/* Timer */}
+        <View className='px-4 py-2'>
+          <AnimatedTimer 
+            time={currentTime} 
+            setTime={setCurrentTime} 
+            onStop={handleStartWorkout}
+            status={status} 
+            setStatus={setStatus}
+            setStartTime={setStartTime}
+          />
+        </View>
+
+        {/* Exercise List */}
+        <KeyboardAwareFlatList
+          data={exercises}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View className='px-4 py-2'>
+              <ExerciseCard
+                exercise={item}
+                exerciseData={exerciseData.find((e: any) => e.id === item.id)} 
+                handleRepChange={handleRepsChange} 
+                handleWeightChange={handleWeightChange}
+                status={status}
+              />
             </View>
-        </Modal>
+          )}
+          enableOnAndroid={true}
+          extraScrollHeight={Platform.select({ ios: 0, android: 25 })}
+          keyboardOpeningTime={0}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          enableResetScrollToCoords={false}
+        />
+
+        {/* Bottom Action Button */}
+        <View className='absolute bottom-0 left-0 right-0 px-4 py-8 bg-background border-t border-border'>
+          <Button 
+            className='w-full' 
+            onPress={handleStartWorkout}
+            disabled={loading || status === 'idle'}
+          >
+            <Text className='font-medium'>
+              {loading ? 'Saving...' : 'Complete Workout'}
+            </Text>
+          </Button>
+        </View>
+      </View>
+    </Modal>
   )
 }
 
