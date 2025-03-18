@@ -4,7 +4,7 @@ import { useColorScheme } from '~/lib/useColorScheme'
 import { NAV_THEME } from '~/lib/constants'
 import { Button } from '../ui/button';
 import { Text as TextUI } from '../ui/text';
-import { Pause, Square, Play } from 'lucide-react-native';
+import { Square, Play } from 'lucide-react-native';
 
 interface AnimatedTimerProps {
     time: number
@@ -19,12 +19,21 @@ const AnimatedTimer = ({ time, setTime, onStop, status, setStatus, setStartTime 
   const { isDarkColorScheme } = useColorScheme()
   const theme = isDarkColorScheme ? NAV_THEME.dark : NAV_THEME.light
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const startTimeRef = useRef<Date | null>(null);
 
   useEffect(() => {
     let interval: any;
     if (status === 'running') {
+      // If we don't have a start time, set it now
+      if (!startTimeRef.current) {
+        startTimeRef.current = new Date();
+      }
+
       interval = setInterval(() => {
-        setTime((prev: number) => prev + 1);
+        if (startTimeRef.current) {
+          const elapsedTime = Math.floor((new Date().getTime() - startTimeRef.current.getTime()) / 1000);
+          setTime(elapsedTime);
+        }
       }, 1000);
 
       // Fade-in animation when starting
@@ -34,7 +43,7 @@ const AnimatedTimer = ({ time, setTime, onStop, status, setStatus, setStartTime 
         useNativeDriver: true,
       }).start();
     } else {
-      // Fade-out animation when pausing/stopping
+      // Fade-out animation when stopping
       Animated.timing(fadeAnim, {
         toValue: 0.5,
         duration: 300,
@@ -48,13 +57,9 @@ const AnimatedTimer = ({ time, setTime, onStop, status, setStatus, setStartTime 
   }, [status, fadeAnim, setTime]);
 
   const handleStartWorkout = () => {
-    setTime(0);
+    startTimeRef.current = new Date();
     setStatus('running');
-    setStartTime(new Date());
-  };
-
-  const handlePauseResume = () => {
-    setStatus((prev: string) => prev === 'running' ? 'paused' : 'running');
+    setStartTime(startTimeRef.current);
   };
 
   const confirmFinish = () => {
@@ -65,6 +70,7 @@ const AnimatedTimer = ({ time, setTime, onStop, status, setStatus, setStartTime 
         { text: 'Cancel', style: 'cancel' },
         { text: 'Finish', onPress: () => {
           setStatus('idle');
+          startTimeRef.current = null;
           onStop();
         }},
       ]
@@ -76,10 +82,9 @@ const AnimatedTimer = ({ time, setTime, onStop, status, setStatus, setStartTime 
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
-  
 
   return (
-    <View className=' justify-center items-center'>
+    <View className='justify-center items-center'>
       <Animated.Text
         className='text-[5rem] font-bold p-8' 
         style={{
@@ -97,18 +102,7 @@ const AnimatedTimer = ({ time, setTime, onStop, status, setStatus, setStartTime 
           <TextUI>Start Workout</TextUI>
         </Button>
       ) : (
-        <View className='flex-row gap-4' >
-          <TouchableOpacity
-            onPress={handlePauseResume}
-          >
-            {status === 'running' ? (
-              <Pause size={40} color={theme.text} strokeWidth={1} />
-            ) : (
-              <Play size={40} color={theme.text} strokeWidth={1} />
-            )}
-
-          </TouchableOpacity>
-
+        <View className='flex-row gap-4'>
           <TouchableOpacity
             onPress={confirmFinish}
           >
@@ -116,7 +110,6 @@ const AnimatedTimer = ({ time, setTime, onStop, status, setStatus, setStartTime 
           </TouchableOpacity>
         </View>
       )}
-    
     </View>
   );
 };

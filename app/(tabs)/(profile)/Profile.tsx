@@ -412,7 +412,7 @@ const Profile = () => {
       const streak = await calculateStreak()
       const records = await fetchPersonalRecords()
       await fetchMonthlyWorkouts()
-      await fetchWeightHistory()
+      await fetchWeightHistory() 
       
       if (streak) setStreakData(streak)
       setPersonalRecords(records)

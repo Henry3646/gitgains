@@ -21,7 +21,7 @@ const EditExercise = () => {
   const [name, setName] = useState(params.exerciseName as string)
   const [sets, setSets] = useState(params.sets as string)
   const [reps, setReps] = useState(params.reps as string)
-  const [restTime, setRestTime] = useState(params.restTime as string)
+  const [rest, setRest] = useState(params.restTime as string)
   const [desc, setDesc] = useState(params.desc as string || '')
   const [muscleGroups, setMuscleGroups] = useState<string[]>(
     params.muscleGroups ? JSON.parse(params.muscleGroups as string) : []
@@ -41,42 +41,67 @@ const EditExercise = () => {
     try {
       setLoading(true)
       setError(null)
+      console.log(params.exerciseId)
+      // First, check if the exercise is part of any workouts
+      const { data: workoutExercises, error: workoutExercisesError } = await supabase
+        .from('Workout_Exercises')
+        .select('workout_id, sets')
+        .eq('exercise_id', params.exerciseId)
 
-      // Get current workout total sets
-      const { data: workoutData, error: workoutFetchError } = await supabase
-        .from('Workouts')
-        .select('total_sets')
-        .eq('id', params.workoutId)
-        .single()
+      if (workoutExercisesError) throw workoutExercisesError
 
-      if (workoutFetchError) throw workoutFetchError
-
-      // Update exercise details
+      // If the exercise is not part of any workouts, update it directly]
       const { error: exerciseError } = await supabase
-        .from('Exercises')
-        .update({
-          name,
-          sets: parseInt(sets),
-          reps: parseInt(reps),
-          rest: parseInt(restTime),
-          desc: desc,
-          muscle_group: muscleGroups
-        })
-        .eq('id', params.exerciseId)
-
-      if (exerciseError) throw exerciseError
-
-      // Update total sets in workout if sets changed
-      if (parseInt(sets) !== parseInt(params.sets as string)) {
-        const setsDiff = parseInt(sets) - parseInt(params.sets as string)
-        const { error: workoutError } = await supabase
-          .from('Workouts')
-          .update({ 
-            total_sets: workoutData.total_sets + setsDiff
+          .from('Exercises')
+          .update({
+            name,
+            sets: parseInt(sets),
+            reps: parseInt(reps),
+            rest: parseInt(rest),
+            desc: desc,
+            muscle_group: muscleGroups
           })
-          .eq('id', params.workoutId)
+          .eq('id', params.exerciseId)
 
-        if (workoutError) throw workoutError
+        if (exerciseError) {
+          console.log(exerciseError)
+        }
+      if (!workoutExercises || workoutExercises.length === 0) {
+        console.log('no workouts')
+      } else {
+        // If the exercise is part of workouts, update all associated workouts
+        const oldSets = parseInt(params.sets as string)
+        const newSets = parseInt(sets)
+        const setsDiff = newSets - oldSets
+
+        // Update each workout's total sets
+        for (const workoutExercise of workoutExercises) {
+          const { data: workoutData, error: workoutFetchError } = await supabase
+            .from('Workouts')
+            .select('total_sets')
+            .eq('id', workoutExercise.workout_id)
+            .single()
+
+          if (workoutFetchError) throw workoutFetchError
+
+          const { error: workoutError } = await supabase
+            .from('Workouts')
+            .update({ 
+              total_sets: workoutData.total_sets + setsDiff
+            })
+            .eq('id', workoutExercise.workout_id)
+
+          if (workoutError) throw workoutError
+
+          // Update the sets in Workout_Exercises
+          const { error: workoutExerciseError } = await supabase
+            .from('Workout_Exercises')
+            .update({ sets: newSets })
+            .eq('workout_id', workoutExercise.workout_id)
+            .eq('exercise_id', params.exerciseId)
+
+          if (workoutExerciseError) throw workoutExerciseError
+        }
       }
 
       router.back()
@@ -87,10 +112,6 @@ const EditExercise = () => {
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-    console.log(muscleGroups)
-  }, [muscleGroups])
 
   return (
     <KeyboardAvoidingView 
@@ -110,7 +131,7 @@ const EditExercise = () => {
       >
         <ChevronLeft size={30} color={theme.text} strokeWidth={2} />
         <View className='w-full'>
-          <H2 className=''>Edit Workout</H2>
+          <H2 className=''>Edit Exercise</H2>
         </View>
       </TouchableOpacity>
 
@@ -194,8 +215,8 @@ const EditExercise = () => {
                     <Input 
                       placeholder='0s' 
                       inputMode='decimal' 
-                      value={restTime} 
-                      onChangeText={setRestTime}
+                      value={rest} 
+                      onChangeText={setRest}
                     />
                   </View>
                 </View>
@@ -220,7 +241,7 @@ const EditExercise = () => {
             <Button 
               className='w-[90%] mt-4' 
               onPress={handleSave}
-              disabled={loading || !name || !sets || !reps || !restTime}
+              disabled={loading || !name || !sets || !reps || !rest}
             >
               {loading ? (
                 <ActivityIndicator color={theme.background} />

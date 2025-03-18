@@ -6,24 +6,7 @@ import { Separator } from '../ui/separator'
 import { Check, Square, SquareCheck } from 'lucide-react-native'
 import { useColorScheme } from '~/lib/useColorScheme'
 import { NAV_THEME } from '~/lib/constants'
-
-interface Exercise {
-  id: string
-  name: string
-  sets: number
-  reps: number
-  rest: number
-  desc: string | null
-  muscle_group?: string
-}
-
-interface ExerciseComponentProps {
-  exercise: Exercise
-  checked: boolean
-  editable: boolean
-  orderNumber?: number
-  onUpdate?: (updates: Partial<Exercise>) => void
-}
+import { ExerciseComponentProps } from '~/types/exercise'
 
 const ExerciseComponent = ({ exercise, checked, editable, orderNumber, onUpdate }: ExerciseComponentProps) => {
   const { isDarkColorScheme } = useColorScheme()
@@ -35,7 +18,7 @@ const ExerciseComponent = ({ exercise, checked, editable, orderNumber, onUpdate 
         <View className='flex-row justify-between items-start'>
           <View className='flex-1'>
             <CardTitle>{exercise.name}</CardTitle>
-            <CardDescription>{exercise.desc}</CardDescription>
+            {exercise.desc && <CardDescription>{exercise.desc}</CardDescription>}
           </View>
           {checked ? (
             <View className='ml-4 w-6 h-6 rounded-full bg-primary/20 items-center justify-center'>
@@ -65,9 +48,17 @@ const ExerciseComponent = ({ exercise, checked, editable, orderNumber, onUpdate 
         </View>
         {exercise.muscle_group && (
           <View className='flex-row gap-2'>
-            <View className='px-2 py-1 rounded-full bg-primary/10'>
-              <Text className='text-xs text-primary capitalize'>{exercise.muscle_group}</Text>
-            </View>
+            {Array.isArray(exercise.muscle_group) ? (
+              exercise.muscle_group.map((group) => (
+                <View key={group} className='px-2 py-1 rounded-full bg-primary/10'>
+                  <Text className='text-xs text-primary capitalize'>{group}</Text>
+                </View>
+              ))
+            ) : (
+              <View className='px-2 py-1 rounded-full bg-primary/10'>
+                <Text className='text-xs text-primary capitalize'>{exercise.muscle_group}</Text>
+              </View>
+            )}
           </View>
         )}
       </CardContent>

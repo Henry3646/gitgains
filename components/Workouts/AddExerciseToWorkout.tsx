@@ -11,14 +11,23 @@ import { supabase } from '~/lib/supabase'
 import ExerciseComponent from './ExerciseComponent'
 import { useFocusEffect } from 'expo-router'
 import { H2 } from '~/components/ui/typography'
+import { Exercise } from '~/types/exercise'
 
-const AddExerciseToWorkout = ({modalVisible, setModalVisible, switchModal, exercises, setExercises}: {modalVisible: any, setModalVisible: any, switchModal: any, exercises: any, setExercises: any}) => {
+interface AddExerciseToWorkoutProps {
+  modalVisible: boolean
+  setModalVisible: (visible: boolean) => void
+  switchModal: () => void
+  exercises: Exercise[]
+  setExercises: (exercises: Exercise[]) => void
+}
+
+const AddExerciseToWorkout = ({modalVisible, setModalVisible, switchModal, exercises, setExercises}: AddExerciseToWorkoutProps) => {
   const { isDarkColorScheme } = useColorScheme()
   const theme = isDarkColorScheme ? NAV_THEME.dark : NAV_THEME.light
   const [searchQuery, setSearchQuery] = useState('')
-  const [allExercises, setAllExercises] = useState<any[]>([])
-  const [filteredExercises, setFilteredExercises] = useState<any[]>([])
-  const [selectedExercises, setSelectedExercises] = useState<any[]>([])
+  const [allExercises, setAllExercises] = useState<Exercise[]>([])
+  const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([])
+  const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([])
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
@@ -40,30 +49,34 @@ const AddExerciseToWorkout = ({modalVisible, setModalVisible, switchModal, exerc
 
   const refreshExercises = async () => {
     setRefreshing(true)
-    const userId = await getCurrentUserId()
-    const { data, error } = await supabase
-      .from('Exercises')
-      .select('*')
-      .eq('user_id', userId)
-      .order('name')
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) throw new Error('No user ID found')
 
-    if (error) {
+      const { data, error } = await supabase
+        .from('Exercises')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name')
+
+      if (error) throw error
+
+      if (data) {
+        setAllExercises(data)
+        setFilteredExercises(data)
+      }
+    } catch (error) {
       console.error('Error fetching exercises:', error)
-      return
+    } finally {
+      setRefreshing(false)
     }
-
-    if (data) {
-      setAllExercises(data)
-      setFilteredExercises(data)
-    }
-    setRefreshing(false)
   }
 
   const handleSearch = (text: string) => {
     setSearchQuery(text)
   }
 
-  const handleCheck = (exercise: any) => {
+  const handleCheck = (exercise: Exercise) => {
     setSelectedExercises(prev => {
       const isSelected = prev.some(ex => ex.id === exercise.id)
       if (isSelected) {

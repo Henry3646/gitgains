@@ -127,7 +127,7 @@ const WorkoutsModal = ({ modalVisible, setModalVisible}: {modalVisible: any, set
                 <Button 
                     className='w-full flex-row justify-center items-center gap-2' 
                     variant="outline" 
-                    onPress={() => router.push({ pathname: '/(tabs)/(workouts)/NewWorkout' })}
+                    onPress={handleNewWorkout}
                 >
                     <Plus size={20} color={theme.text} strokeWidth={2} />
                     <Text>Create New Workout</Text>

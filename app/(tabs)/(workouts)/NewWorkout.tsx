@@ -17,16 +17,7 @@ import getCurrentUserId from '~/lib/getCurrentUserId'
 import { supabase } from '~/lib/supabase'
 import { router } from 'expo-router'
 import SwipeableRow from '~/components/SwipeableRow'
-
-interface Exercise {
-  id: string;
-  name: string;
-  sets: number;
-  reps: number;
-  rest: number;
-  muscle_group: string[];
-  desc?: string;
-}
+import { Exercise } from '~/types/exercise'
 
 const NewWorkout = () => {
   const { isDarkColorScheme } = useColorScheme()
@@ -54,10 +45,11 @@ const NewWorkout = () => {
       params: { 
         exerciseId: exercise.id,
         exerciseName: exercise.name,
-        sets: exercise.sets.toString(),
-        reps: exercise.reps.toString(),
-        restTime: exercise.rest.toString(),
-        desc: exercise.desc || ''
+        sets: exercise.sets?.toString() || '0',
+        reps: exercise.reps?.toString() || '0',
+        rest: exercise.rest?.toString() || '0',
+        desc: exercise.desc || '',
+        muscleGroup: exercise.muscle_group || ''
       }
     })
   }
@@ -73,9 +65,14 @@ const NewWorkout = () => {
 
       let muscleGroupCount: { [key: string]: number } = {}
       addedExercises.forEach((exercise) => {
-        exercise.muscle_group.forEach((group: string) => {
-          muscleGroupCount[group] = (muscleGroupCount[group] || 0) + 1
-        })
+        if (exercise.muscle_group) {
+          const groups = Array.isArray(exercise.muscle_group) 
+            ? exercise.muscle_group 
+            : [exercise.muscle_group]
+          groups.forEach((group: string) => {
+            muscleGroupCount[group] = (muscleGroupCount[group] || 0) + 1
+          })
+        }
       })
 
       const muscleGroups = Object.keys(muscleGroupCount)
@@ -106,6 +103,7 @@ const NewWorkout = () => {
           exercise_id: exercise.id,
           sets: exercise.sets,
           reps: exercise.reps,
+          user_id: userId
         }))
 
         const { error: exercisesError } = await supabase

@@ -8,14 +8,7 @@ import { Input } from '../ui/input'
 import { Timer, Play, Square } from 'lucide-react-native'
 import { useColorScheme } from '~/lib/useColorScheme'
 import { NAV_THEME } from '~/lib/constants'
-
-type ExerciseCardProps = {
-    exercise: any
-    exerciseData: any
-    handleRepChange: any
-    handleWeightChange: any
-    status: string
-}
+import { ExerciseCardProps } from '~/types/exercise'
 
 const ExerciseCard = ({exercise, exerciseData, handleRepChange, handleWeightChange, status}: ExerciseCardProps) => {
     const { isDarkColorScheme } = useColorScheme()
@@ -78,6 +71,20 @@ const ExerciseCard = ({exercise, exerciseData, handleRepChange, handleWeightChan
         return `${mins}:${secs.toString().padStart(2, '0')}`
     }
 
+    const handleRepInput = (setIndex: number, value: string) => {
+        const numValue = value === '' ? '' : Number(value)
+        if (numValue === '' || (numValue >= 0 && numValue <= 999)) {
+            handleRepChange(exercise.id, setIndex, value)
+        }
+    }
+
+    const handleWeightInput = (setIndex: number, value: string) => {
+        const numValue = value === '' ? '' : Number(value)
+        if (numValue === '' || (numValue >= 0 && numValue <= 999)) {
+            handleWeightChange(exercise.id, setIndex, value)
+        }
+    }
+
     return (
       <View className='py-2'>
         <Card className=''>
@@ -127,8 +134,9 @@ const ExerciseCard = ({exercise, exerciseData, handleRepChange, handleWeightChan
                 <Separator orientation='vertical' />
                 <Input
                   value={exerciseData?.sets[i]?.reps?.toString() || ''}
-                  onChangeText={(text) => handleRepChange(exercise.id, i, text)}
-                  keyboardType='decimal-pad'
+                  onChangeText={(text) => handleRepInput(i, text)}
+                  keyboardType='number-pad'
+                  maxLength={3}
                   className='w-1/4 h-8 text-center my-2'
                   placeholder='Reps'
                   editable={status === 'running'}
@@ -136,8 +144,9 @@ const ExerciseCard = ({exercise, exerciseData, handleRepChange, handleWeightChan
                 <Separator orientation='vertical' />
                 <Input
                   value={exerciseData?.sets[i]?.weight?.toString() || ''}
-                  onChangeText={(text) => handleWeightChange(exercise.id, i, text)}
-                  keyboardType='decimal-pad'
+                  onChangeText={(text) => handleWeightInput(i, text)}
+                  keyboardType='number-pad'
+                  maxLength={3}
                   className='w-1/4 h-8 text-center my-2'
                   placeholder='lbs'
                   editable={status === 'running'}

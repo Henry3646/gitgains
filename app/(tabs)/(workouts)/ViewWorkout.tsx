@@ -113,19 +113,28 @@ const ViewWorkout = () => {
           onPress: async () => {
             try {
               setLoading(true)
-              const { error } = await supabase
+
+              console.log(exerciseId)
+              const { data, error } = await supabase
                 .from('Workout_Exercises')
                 .delete()
-                .eq('workout_id', workoutId)
-                .eq('exercise_id', exerciseId)
+                .match({
+                  workout_id: workoutId,
+                  exercise_id: exerciseId
+                })
 
-              if (error) throw error
+              if (error) {
+                console.log(error)
+              } else {
+                console.log(data)
+              }
 
               // Refresh exercises list
               await getExercises()
               
               // Update total sets in workout
               if (workout) {
+                console.log(exercises)
                 const exerciseToDelete = exercises.find(e => e.id === exerciseId)
                 const setsToRemove = exerciseToDelete?.sets || 0
                 
@@ -232,7 +241,7 @@ const ViewWorkout = () => {
       <StartWorkoutModal 
         modalVisible={showStartWorkoutModal} 
         setModalVisible={setShowStartWorkoutModal} 
-        workout={workout} 
+        workout={workout || { id: '', name: '' }} 
         exercises={exercises}
       />
 
